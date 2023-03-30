@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+	namespace="com.marketkurly.www.admin.community.mapper.CommunityMapper">
+	
+	<!-- 커뮤니티 목록 가져오기 -->
+	<select id="getBoard" parameterType = "String" resultType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+		SELECT BO.MENU_CODE
+		     , BO.MENU_NAME
+		     , BO.MENU_PART
+		    FROM EXGRANTABLEDLIST EX
+		        , BOARD_MENU BO
+		    WHERE GRANT_CODE = ( SELECT USER_AUTH 
+		                            FROM USER_TBL 
+		                            WHERE USER_ID = #{user_id} 
+		                        )
+		    AND EX.EXGRANT_CODE = BO.MENU_CODE
+            AND BO.ABLED = 'Y'
+	</select>
+	
+	<!-- 목록 쓰기 가능 정보 -->
+	<select id="getBoardAbled" parameterType="String" resultType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+		SELECT MENU_PART
+			 , WRITE_ABLED
+			 , IMPORTANT
+			 FROM BOARD_MENU
+			 WHERE MENU_CODE = #{code}
+	</select>
+	
+	<!-- 목록 댓글 가능 정보 -->
+	<select id="getBoardReplyAbled" parameterType="String" resultType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+		SELECT MENU_PART
+		     , REPLY_ABLED
+		     FROM BOARD_MENU B
+		        , BOARD T
+		     WHERE B.MENU_PART = T.BOARD_PART
+		     AND T.BOARD_CODE = #{code}
+	</select>
+	
+	<!-- 게시판 목록 가져오기 -->
+	<select id="getBoardList" parameterType="hashmap" resultType="com.marketkurly.www.admin.community.domain.Board">
+		SELECT BOARD_CODE
+		      , BOARD_ID
+		      , BOARD_TITLE
+		      , BOARD_DATE
+		      FROM BOARD 
+         	  WHERE <foreach collection="board" item="board" separator="or">
+         	  			BOARD_PART = #{board.menu_part}
+         	  		</foreach>
+		      ORDER BY BOARD_CODE DESC
+    </select>
+    
+    <!-- 판매자 게시판 목록 가져오기 -->
+	<select id="getMyBoardList" parameterType="hashmap" resultType="com.marketkurly.www.admin.community.domain.Board">
+         SELECT BOARD_CODE
+		      , BOARD_ID
+		      , BOARD_TITLE
+		      , BOARD_DATE
+		      , BOARD_PART
+		      FROM BOARD B
+		         , ITEM I
+		      WHERE B.BOARD_ITEMCODE = I.ITEM_CODE
+		      AND I.USER_ID = #{user_id}
+		      AND (<foreach collection="board" item="board" separator="or">
+         	  			BOARD_PART = #{board.menu_part}
+         	  		</foreach>)
+		      ORDER BY BOARD_CODE DESC
+    </select>
+    
+    <!-- 특정 목록 가져오기 -->
+	<select id="getBoardListCode" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+         SELECT BOARD_CODE
+         	  , BOARD_ID
+         	  , BOARD_TITLE
+         	  , BOARD_DATE
+         	  FROM BOARD
+         	  WHERE BOARD_PART = (SELECT MENU_PART
+         	  							FROM BOARD_MENU
+         	  							WHERE MENU_CODE = #{code}
+					         	  )
+         	  ORDER BY BOARD_CODE DESC
+    </select>
+    
+    <!-- 판매자 특정 목록 가져오기 -->
+	<select id="getMyBoardListCode" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+         SELECT BOARD_CODE
+         	  , BOARD_ID
+         	  , BOARD_TITLE
+         	  , BOARD_DATE
+         	  FROM BOARD B
+		         , ITEM I
+		      WHERE B.BOARD_ITEMCODE = I.ITEM_CODE
+		      AND I.USER_ID = #{user_id}
+         	  AND BOARD_PART = (SELECT MENU_PART
+         	  							FROM BOARD_MENU
+         	  							WHERE MENU_CODE = #{code}
+					         	  )
+         	  ORDER BY BOARD_DATE DESC
+    </select>
+    
+    <!-- 커뮤니티 권한 검사 -->
+    <select id="getCommunityGrant" parameterType="String" resultType="String">
+    	SELECT E.EXGRANT_CODE
+		     FROM USER_TBL U
+		        , EXGRANTABLEDLIST E
+		     WHERE U.USER_ID=#{user_id}
+		     AND U.USER_AUTH = E.GRANT_CODE
+		     AND E.EXGRANT_CODE=#{grant}
+    </select>
+    
+    <!-- 게시판 상세 -->
+    <select id="getBoardDetail" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+	    <![CDATA[
+	    	SELECT BOARD_CODE
+			      , BOARD_ID
+			      , BOARD_TITLE
+			      , BOARD_CONTENT
+			      , BOARD_DATE
+			      , BOARD_ITEMCODE
+			      , BOARD_PART
+			      , BOARD_ORDERCODE
+			      , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_NAME
+			            WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_NAME
+                        WHEN O.ORDER_CODE IS NULL THEN I.ITEM_NAME
+			        END ITEM_NAME
+			      , O.ORDER_COUNT
+			      , BOARD_IMAGE
+			      FROM BOARD B 
+			      LEFT JOIN ORDERLIST O
+			      ON B.BOARD_ORDERCODE = O.ORDER_CODE
+			      AND B.BOARD_ITEMCODE = O.ORDER_ITEMCODE
+			      LEFT JOIN ITEM I
+			      ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			      OR B.BOARD_ITEMCODE = I.ITEM_CODE
+			      LEFT JOIN ITEM_HISTORY H
+			      ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			      AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			      WHERE BOARD_CODE = #{code}
+		]]>
+    </select>
+    
+    <!-- 답글 등록 -->
+    <insert id="insertReply" parameterType="com.marketkurly.www.admin.community.domain.Reply">
+    	INSERT INTO REPLY(REPLY_CONTENT
+    					, REPLY_BOARDNUM
+    					, REPLY_AUTHOR
+    					, REPLY_NUM
+    					)
+    			VALUES(#{reply_content}
+    				, #{reply_boardNum}
+    				, #{reply_author}
+    				, REPLY_SEQUENCE.NEXTVAL
+    				)
+    </insert>
+    
+    <!-- 답글 조회 -->
+    <select id="getReply" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Reply">
+    	SELECT REPLY_DATE
+		     , REPLY_CONTENT
+		     , REPLY_AUTHOR
+		     , REPLY_NUM
+		     FROM REPLY
+		     WHERE REPLY_BOARDNUM = #{code}
+		     ORDER BY REPLY_DATE
+    </select>
+    
+    <!-- 안 읽은 글 조회 -->
+    <select id="getUnreadBoard" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+    	SELECT B.BOARD_CODE
+		     , B.BOARD_TITLE
+		     , B.BOARD_DATE
+		     , B.BOARD_ID
+		     FROM BOARD B
+		     LEFT JOIN REPLY R
+		     ON B.BOARD_CODE = R.REPLY_BOARDNUM
+		     WHERE B.BOARD_PART = #{code}
+		     AND R.REPLY_NUM IS NULL
+             AND B.BOARD_ITEMCODE IS NULL
+             AND B.BOARD_ORDERCODE IS NULL
+		     ORDER BY B.BOARD_CODE DESC
+		
+		<!-- 
+    	SELECT B.BOARD_CODE
+		     , B.BOARD_TITLE
+		     , B.BOARD_DATE
+		     , B.BOARD_ID
+		     FROM BOARD B
+		     LEFT JOIN REPLY R
+		     ON B.BOARD_CODE = R.REPLY_BOARDNUM
+		     WHERE (B.READ = '읽지않음'
+		     OR R.READ = '읽지않음')
+		     AND B.BOARD_PART = #{code}
+		     GROUP BY B.BOARD_CODE, B.BOARD_TITLE, B.BOARD_DATE, B.BOARD_ID
+		 -->
+    </select>
+    
+    <!-- 판매자 안 읽은 글 조회 -->
+    <select id="getMyUnreadBoard" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+    	SELECT B.BOARD_CODE
+		     , B.BOARD_TITLE
+		     , B.BOARD_DATE
+		     , B.BOARD_ID
+		     FROM BOARD B
+		     LEFT JOIN REPLY R
+		     ON B.BOARD_CODE = R.REPLY_BOARDNUM
+		     INNER JOIN ITEM I
+		     ON B.BOARD_ITEMCODE = I.ITEM_CODE
+		     WHERE B.BOARD_PART = #{code}
+		     AND R.REPLY_NUM IS NULL
+		     AND I.USER_ID = 'seller123'
+		     
+		<!-- 
+    	SELECT B.BOARD_CODE
+		     , B.BOARD_TITLE
+		     , B.BOARD_DATE
+		     , B.BOARD_ID
+		     FROM BOARD B
+		     LEFT JOIN REPLY R
+		     ON B.BOARD_CODE = R.REPLY_BOARDNUM
+		     INNER JOIN ITEM I
+		     ON B.BOARD_ITEMCODE = I.ITEM_CODE
+		     WHERE (B.READ = '읽지않음'
+		     OR R.READ = '읽지않음')
+		     AND B.BOARD_PART = #{code}
+		     AND I.USER_ID = #{user_id}
+		     GROUP BY B.BOARD_CODE, B.BOARD_TITLE, B.BOARD_DATE, B.BOARD_ID
+		 -->
+    </select>
+    
+    <!-- 판매자 조회 -->
+    <select id="getSeller" parameterType="String" resultType="String">
+    	SELECT I.USER_ID
+    		 FROM BOARD B
+    		 	 ,ITEM I
+    		 WHERE B.BOARD_ITEMCODE = I.ITEM_CODE
+    		 AND B.BOARD_CODE =  #{code}
+    </select>
+    
+    <!-- 글쓴이 권한 -->
+    <select id="getAuthorGrant" parameterType="String" resultType="String">
+    	SELECT USER_AUTH
+		     FROM USER_TBL U
+		         , BOARD B
+		     WHERE U.USER_ID = B.BOARD_ID
+		     AND BOARD_CODE=#{code}
+    </select>
+    
+    <!-- 아이디 권한 -->
+    <select id="getMyGrant" parameterType = "String" resultType="String">
+    	SELECT USER_AUTH
+		     FROM USER_TBL 
+		     WHERE USER_ID = #{user_id}
+    </select>
+    
+    <!-- 글 등록 -->
+    <insert id="insertBoard" parameterType="com.marketkurly.www.admin.community.domain.Board">
+    	INSERT INTO BOARD(BOARD_CODE
+    						, BOARD_ID
+    						, BOARD_TITLE
+    						, BOARD_CONTENT
+    						, BOARD_DATE
+    						, BOARD_IMAGE
+    						, BOARD_PART
+    						)VALUES(BOARD_SEQUENCE.NEXTVAL
+    							 	, #{board_id}
+    							 	, #{board_title}
+    							 	, #{board_content}
+    							 	, sysdate
+    							 	, #{board_image, jdbcType=VARCHAR}
+    							 	, #{board_part}
+    						)
+    </insert>
+    
+    <!-- 글 삭제 -->
+    <delete id="deleteBoard" parameterType="String">
+    	DELETE FROM BOARD
+    		WHERE BOARD_CODE = #{code}
+    </delete>
+    
+    <!-- 글 삭제 시 댓글 삭제 -->
+    <delete id="deleteAllReply" parameterType="String">
+    	DELETE FROM REPLY
+    		WHERE REPLY_BOARDNUM = #{code}
+    </delete>
+    
+    <!-- 글 이미지 -->
+    <select id="getImage" parameterType="String" resultType="com.marketkurly.www.admin.community.domain.Board">
+    	SELECT BOARD_IMAGE
+    		 , BOARD_PART
+    		 , BOARD_DATE
+    		FROM BOARD
+    		WHERE BOARD_CODE = #{code}
+    </select>
+    
+    <!-- 답글 삭제 -->
+    <delete id="deleteReply" parameterType="String">
+    	DELETE FROM REPLY
+    		WHERE REPLY_NUM = #{code}
+    </delete>
+    
+    <!-- 글 수정 -->
+    <update id="updateBoard" parameterType="com.marketkurly.www.admin.community.domain.Board">
+    	UPDATE BOARD
+    		 SET BOARD_TITLE = #{board_title}
+    		 	, BOARD_CONTENT = #{board_content}
+    		 	, BOARD_IMAGE = #{board_image, jdbcType=VARCHAR}
+    		 WHERE BOARD_CODE = #{board_code}
+    </update>
+    
+    <!-- 이미지 제외 글 수정 -->
+    <update id="updateBoardExcept" parameterType="com.marketkurly.www.admin.community.domain.Board">
+    	UPDATE BOARD
+    		 SET BOARD_TITLE = #{board_title}
+    		 	, BOARD_CONTENT = #{board_content}
+    		 WHERE BOARD_CODE = #{board_code}
+    </update>
+    
+    <!-- 답글 수정 -->
+    <update id="updateReply" parameterType="String">
+    	UPDATE REPLY
+    		 SET REPLY_CONTENT = #{reply_content}
+    		 WHERE REPLY_NUM = #{reply_code}
+    </update>
+</mapper>

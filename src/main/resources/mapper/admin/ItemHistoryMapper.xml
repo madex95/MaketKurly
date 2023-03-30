@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.itemHistory.mapper.ItemHistoryMapper">
+		<select id="getItemHistoryList" resultType="com.marketkurly.www.admin.itemHistory.domain.ItemHistory">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , B.NAME 			AS ITEM_CGCODE
+				 , A.STARTDATE
+				 , A.ENDDATE
+				 FROM ITEM_HISTORY  A
+				 	, CATEGORY		B
+				 WHERE A.ITEM_CGCODE = B.CODE
+		</select>
+		<select id="searchItemHistory" parameterType = "com.marketkurly.www.admin.itemHistory.domain.ItemHistory" resultType="com.marketkurly.www.admin.itemHistory.domain.ItemHistory">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , B.NAME 		AS ITEM_CGCODE
+				 , A.STARTDATE
+				 , A.ENDDATE
+				 FROM ITEM_HISTORY	A
+				 	, CATEGORY		B
+				 WHERE A.ITEM_CODE LIKE DECODE(#{item_code},NULL,'%','%' || #{item_code} || '%')
+				 AND A.ITEM_CGCODE = B.CODE
+				 AND A.ITEM_NAME LIKE DECODE(#{item_name},NULL,'%','%' || #{item_name} || '%')
+				 AND TO_CHAR(A.STARTDATE,'YYYY-MM-DD') <![CDATA[ <= ]]> TO_CHAR(#{endDate},'YYYY-MM-DD')
+				 AND TO_CHAR(A.ENDDATE,'YYYY-MM-DD') <![CDATA[ >= ]]> TO_CHAR(#{startDate},'YYYY-MM-DD')
+		</select>
+		
+	</mapper>

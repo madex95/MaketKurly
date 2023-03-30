@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.boardMenu.mapper.BoardMenuMapper">
+		<!-- 게시판메뉴 추가 -->
+		<insert id="addBoardMenu" parameterType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+			INSERT
+				INTO BOARD_MENU(
+					  MENU_CODE
+					, MENU_NAME
+					, MENU_PART
+					, ABLED
+					, REPLY_ABLED
+					, WRITE_ABLED
+					, IMPORTANT
+				)
+				VALUES(
+					  #{menu_code}
+					, #{menu_name}
+					, #{menu_part}
+					, #{abled}
+					, #{reply_abled}
+					, #{write_abled}
+					, #{important}
+				)
+		</insert>
+		
+		<!-- 게시판 메뉴 조회 -->
+		<select id="getBoardMenuList" resultType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , MENU_PART
+				 , ABLED
+				 , REPLY_ABLED
+				 , WRITE_ABLED
+				 , IMPORTANT
+				 FROM BOARD_MENU
+				 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 코드 중복 검사 -->
+		<select id="exitBoardCode" parameterType="String" resultType="String">
+			SELECT MENU_CODE
+				FROM BOARD_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 메뉴 사용여부 변경 -->
+		<update id="updateBoardMenuAbled" parameterType="String">
+			UPDATE BOARD_MENU
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+		
+		<!-- 메뉴 정보 조회 -->
+		<select id="getBoardMenuInfo" parameterType= "String" resultType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , MENU_PART
+				 , ABLED
+				 , REPLY_ABLED
+				 , WRITE_ABLED
+				 , IMPORTANT
+				 FROM BOARD_MENU
+				 WHERE MENU_CODE = #{menu_code}
+		</select>
+		
+		<!-- 메뉴 정보 수정 -->
+		<update id="updateBoardMenu" parameterType="com.marketkurly.www.admin.boardMenu.domain.BoardMenu">
+			UPDATE BOARD_MENU
+				SET MENU_NAME = #{menu_name}
+					, MENU_PART = #{menu_part}
+					, ABLED = #{abled}
+					, REPLY_ABLED = #{reply_abled}
+					, WRITE_ABLED = #{write_abled}
+					, IMPORTANT = #{important}
+				WHERE MENU_CODE = #{menu_code}
+		</update>
+		
+		<!-- 메뉴 삭제 -->
+		<delete id="deleteBoardMenu" parameterType="String">
+			DELETE FROM BOARD_MENU
+				WHERE MENU_CODE = #{menu_code}
+		</delete>
+			
+		<!-- 메뉴 댓글 가능 여부 변경 -->
+		<update id="updateBoardMenuReplyAbled" parameterType="String">
+			UPDATE BOARD_MENU
+				SET REPLY_ABLED = DECODE(REPLY_ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+			
+		<!-- 메뉴 쓰기 가능 여부 변경 -->
+		<update id="updateBoardMenuWriteAbled" parameterType="String">
+			UPDATE BOARD_MENU
+				SET WRITE_ABLED = DECODE(WRITE_ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+		
+		<!-- 안 읽은 글 알림 변경 -->
+		<update id="updateBoardMenuImportant" parameterType="String">
+			UPDATE BOARD_MENU
+				SET IMPORTANT = DECODE(IMPORTANT,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+	</mapper>

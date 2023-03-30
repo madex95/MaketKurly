@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.marketkurly.www.item.main.mapper.WelcomeWebMapper">
+
+    <!--메인페이지이지 상품 3개에 대한 -->
+   <select id = "selectWelcomeWebServiceList" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+    select item_code,item_name,item_price, item_detail, item_image,ori_date from item where  item_code in ('p-001','p-002','p-003')
+   </select>
+   <!-- 검색 -->
+      <select id = "search" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+    select item_code,item_name,item_price, item_detail, item_image,ori_date from item where  item_name =  #{item_name , jdbcType=VARCHAR}
+   </select>
+   <!-- 카테고리 출력 및 페이징 -->
+     <select id = "cateitemlist" parameterType="com.marketkurly.www.item.main.domain.Criteria" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+		<![CDATA[
+	   	select rn, item_code, item_name, item_price, item_detail, item_image, ori_date, item_cgcode, abled, code from
+	   	  ( select rownum as rn, item_code,item_name,item_price, item_detail, item_image,ori_date,item_cgcode,item.abled,code from item 
+	    			inner join category on item.item_cgcode = category.code
+	 						where item.item_cgcode = #{item_cgcode , jdbcType=VARCHAR} and item.abled='Y' )   
+       								where rn <= #{cri.pageNum} * #{cri.amount}  and rn > (#{cri.pageNum} - 1) * #{cri.amount}
+      	]]>
+			 
+   </select>
+   <!-- 상세페이지 -->
+	<select id = "detailpage" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+	select *  from item 
+	where item_code =  #{item_code , jdbcType=VARCHAR}
+   </select>
+	
+	<!-- 권한 검사 -->
+	<select id="grant" resultType="String" parameterType="String">
+		SELECT USER_AUTH
+			 FROM USER_TBL
+			 WHERE USER_ID=#{user_id}
+	</select>
+
+  </mapper>

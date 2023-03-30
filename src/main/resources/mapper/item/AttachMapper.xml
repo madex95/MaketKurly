@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.marketkurly.www.item.main.mapper.AttachMapper">
+		<select id="getAttachList" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+	
+		select item_image from item  where item_code = #{item_code}
+	
+	</select>
+
+  </mapper>

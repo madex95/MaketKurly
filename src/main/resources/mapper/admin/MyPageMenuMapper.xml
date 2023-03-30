@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+    <mapper namespace="com.marketkurly.www.admin.myPageMenu.mapper.MyPageMenuMapper">
+		<!-- 마이페이지메뉴 추가 -->
+		<insert id="addMyPageMenu" parameterType="com.marketkurly.www.admin.myPageMenu.domain.MyPageMenu">
+			INSERT
+				INTO MY_PAGE_MENU(
+					  MENU_CODE
+					, MENU_NAME
+					, MENU_ADDRESS
+					, ABLED
+				)
+				VALUES(
+					  #{menu_code}
+					, #{menu_name}
+					, #{menu_address}
+					, #{abled}
+				)
+		</insert>
+		
+		<!-- 마이페이지메뉴 조회 -->
+		<select id="getMyPageMenuList" resultType="com.marketkurly.www.admin.myPageMenu.domain.MyPageMenu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , MENU_ADDRESS
+				 , ABLED
+				 FROM MY_PAGE_MENU
+				 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 코드 중복 검사 -->
+		<select id="exitMyPageCode" parameterType="String" resultType="String">
+			SELECT MENU_CODE
+				FROM MY_PAGE_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 메뉴 사용여부 변경 -->
+		<update id="updateMyPageMenuAbled" parameterType="String">
+			UPDATE MY_PAGE_MENU
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+		
+		<!-- 메뉴 조회 -->
+		<select id="getMyPageMenuInfo" parameterType="String" resultType="com.marketkurly.www.admin.myPageMenu.domain.MyPageMenu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , MENU_ADDRESS
+				 , ABLED
+				FROM MY_PAGE_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 메뉴 수정 -->
+		<update id="updateMyPageMenu" parameterType="com.marketkurly.www.admin.myPageMenu.domain.MyPageMenu">
+			UPDATE MY_PAGE_MENU
+				SET MENU_NAME = #{menu_name}
+					, MENU_ADDRESS = #{menu_address}
+					, ABLED = #{abled}
+				WHERE MENU_CODE = #{menu_code}
+		</update>
+		
+		<!-- 메뉴 삭제 -->
+		<delete id="deleteMyPageMenu" parameterType="String">
+			DELETE FROM MY_PAGE_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</delete>
+	</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.marketkurly.www.item.main.mapper.ReviewMapper">
+    <!--리뷰 등록 -->
+    <insert id = "enrollreply" parameterType = "com.marketkurly.www.item.main.domain.ReviewVO">
+        
+ insert into review(review_itemcode, review_id, review_grade, review_date, review_content) values 
+ (#{review_itemcode, jdbcType=VARCHAR}, #{review_id,  jdbcType=VARCHAR}, #{review_grade, jdbcType=VARCHAR},SYSDATE,#{review_content, jdbcType=VARCHAR})
+        
+    </insert>
+		<!-- 댓글체크 -->
+		<select id="checkReply" resultType="integer">
+	
+		select count(review_id) from review where review_itemcode = #{review_itemcode , jdbcType=VARCHAR} and review_id =#{review_id , jdbcType=VARCHAR}
+	
+	</select>
+ <!-- 댓글 페이징 -->
+  	<select id="getReplyList" resultType="com.marketkurly.www.item.main.domain.ReviewVO">
+	<!-- 
+  	<![CDATA[ 
+  				SELECT * FROM REVIEW WHERE REVIEW_ITEMCODE =  #{item_code , jdbcType=VARCHAR}
+  	]]>
+  	 -->
+  	 <![CDATA[
+		SELECT * FROM(  		
+			SELECT ROWNUM AS RN, REVIEW_ITEMCODE, REVIEW_ID, REVIEW_GRADE, REVIEW_DATE, REVIEW_CONTENT
+			FROM REVIEW
+			WHERE ROWNUM <= #{pageNum} * #{amount}  and REVIEW_ITEMCODE = #{item_code , jdbcType=VARCHAR}	
+			ORDER BY REVIEW_DATE DESC  	
+  			)
+  		WHERE RN > (#{pageNum} -1) * #{amount}
+  		]]>	
+  	</select>
+  	
+  	<select id="getReplyTotal" resultType="int">
+  	
+  		SELECT COUNT(*)
+  			FROM REVIEW
+  		WHERE REVIEW_ITEMCODE = #{item_code , jdbcType=VARCHAR}
+  	
+  	</select>
+  	
+  	<!-- 댓글수정 -->
+  	<update id="updateReply">
+  	
+  		UPDATE REVIEW SET REVIEW_CONTENT = #{review_content , jdbcType=VARCHAR}, REVIEW_GRADE = #{review_grade , jdbcType=VARCHAR}
+  		WHERE REVIEW_ID = #{review_id , jdbcType=VARCHAR}
+  		
+  	</update>
+  	
+  	<select id="getUpdateReply" resultType="com.marketkurly.www.item.main.domain.ReviewVO">
+	
+		SELECT * FROM REVIEW
+		WHERE REVIEW_ID = #{review_id , jdbcType=VARCHAR} and REVIEW_ITEMCODE = #{review_itemcode , jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 댓글 삭제 -->
+  	<delete id="deleteReply">
+  	
+  		DELETE FROM REVIEW
+  		WHERE REVIEW_ID = #{review_id , jdbcType=VARCHAR}
+  		
+  	</delete>
+  	
+  	<select id="test" resultType="int">
+  	SELECT count(*) FROM REVIEW
+  	</select>
+ 
+  </mapper>

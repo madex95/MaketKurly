@@ -1,0 +1,63 @@
+var creditCards = {};
+
+var vendors = {
+  'kakao-pay': {
+    name: '카카오페이',
+    code: 'kakao-pay',
+  },
+
+  'naver-pay': {
+    name: '네이버페이',
+    code: 'naver-pay',
+  },
+  'n': {
+    name: '네이버페이',
+    code: 'naver-pay',
+  },
+
+  'chai': {
+    name: '차이',
+    code: 'chai',
+  },
+
+  'toss': {
+    name: '토스',
+    code: 'toss',
+  },
+
+  'payco': {
+    name: '페이코',
+    code: 'payco',
+  },
+  't': {
+    name: '페이코',
+    code: 'payco',
+  },
+
+  'smile-pay': {
+    name: '스마일페이',
+    code: 'smile-pay',
+  },
+  's': {
+    name: '스마일페이',
+    code: 'smile-pay',
+  },
+
+  'toss-payments': {
+    name: '신용카드',
+    code: 'toss-payments',
+  },
+  'c': {
+    name: '신용카드',
+    code: 'toss-payments',
+  },
+
+  'mobilians': {
+    name: '휴대폰',
+    code: 'mobilians',
+  },
+  'h': {
+    name: '휴대폰',
+    code: 'mobilians',
+  },
+}

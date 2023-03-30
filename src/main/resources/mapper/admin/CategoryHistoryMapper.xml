@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.categoryHistory.mapper.CategoryHistoryMapper">
+		<select id="getCategoryHistoryList" resultType="com.marketkurly.www.admin.categoryHistory.domain.CategoryHistory">
+			SELECT CODE
+				 , NAME
+				 , STARTDATE
+				 , ENDDATE
+				 FROM CATEGORY_HISTORY
+		</select>
+		<select id="searchCGHistory" parameterType = "com.marketkurly.www.admin.categoryHistory.domain.CategoryHistory" resultType="com.marketkurly.www.admin.categoryHistory.domain.CategoryHistory">
+			SELECT CODE
+				 , NAME
+				 , STARTDATE
+				 , ENDDATE
+				 FROM CATEGORY_HISTORY
+				 WHERE CODE LIKE DECODE(#{code},NULL,'%','%' || #{code} || '%')
+				 AND NAME LIKE DECODE(#{name},NULL,'%','%' || #{name} || '%')
+				 AND TO_CHAR(STARTDATE,'YYYY-MM-DD') <![CDATA[ <= ]]> TO_CHAR(#{endDate},'YYYY-MM-DD')
+				 AND TO_CHAR(ENDDATE,'YYYY-MM-DD') <![CDATA[ >= ]]> TO_CHAR(#{startDate},'YYYY-MM-DD')
+		</select>
+	</mapper>

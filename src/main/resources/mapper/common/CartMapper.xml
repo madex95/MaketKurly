@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  
+<mapper namespace="com.marketkurly.www.common.user.myPage.myCart.mapper.CartMapper">
+		
+	<resultMap type="com.marketkurly.www.common.user.domain.UserVO" id="userMap">
+	    <id property="user_id" column="user_id"/>
+	    <result property="user_id" column="user_id"/>
+	    <result property="user_pw" column="user_pw"/>
+	    <result property="user_auth" column="user_auth"/>
+	</resultMap>
+		
+		 
+		 <!-- 카트 담기 -->
+		<insert id="addCart">
+		INSERT INTO TEST_CART (
+		                       CART_ITEMCODE
+		                       ,CART_ID
+		                       ,CART_COUNT
+		                   	  ) 
+				        VALUES (
+				                #{cart_itemcode, jdbcType=VARCHAR}
+				                ,#{cart_id, jdbcType=VARCHAR}
+				                ,#{cart_count, jdbcType=VARCHAR}
+				               )
+		</insert>
+		
+		<!-- 카트 몇개 담겼는지 확인 -->
+		<select id="cartCount" resultType="int">
+			SELECT COUNT(CART_ITEMCODE)
+				FROM TEST_CART
+				WHERE CART_ID = #{cart_id, jdbcType=VARCHAR}
+		</select>
+		
+		
+		<!-- 상품이 이미 있는지 확인 -->
+		<select id="varCart" resultType="int">
+			SELECT count(CART_ITEMCODE)
+				    FROM TEST_CART
+				    WHERE CART_ITEMCODE = #{cart_itemcode, jdbcType=VARCHAR}
+				    AND CART_ID = #{cart_id, jdbcType=VARCHAR}
+		</select>
+		
+		
+		<!--  상품이 이미 있으면 수량만 변경 -->
+		<update id="countPlus">
+		UPDATE TEST_CART SET CART_COUNT = CART_COUNT+#{cart_count, jdbcType=VARCHAR}
+				WHERE CART_ITEMCODE = #{cart_itemcode, jdbcType=VARCHAR}
+			    AND CART_ID = #{cart_id, jdbcType=VARCHAR}
+		</update>
+
+
+		<!-- 카트 목록 -->
+		<select id="readCart" resultType="com.marketkurly.www.common.user.myPage.myCart.domain.CartListVO">
+			    SELECT  IT.ITEM_CODE AS CART_ITEMCODE
+				        ,UCT.CART_ID AS CART_ID
+				        ,IT.ITEM_NAME AS ITEM_NAME
+				        ,IT.ITEM_PRICE*UCT.CART_COUNT AS ITEM_PRICE
+				        ,IT.ITEM_PRICE AS ORI_PRICE
+				        ,IT.ORI_DATE AS ORI_DATE
+				        ,IT.ITEM_IMAGE AS ITEM_IMAGE
+				        ,UCT.CART_COUNT AS CART_COUNT
+				        ,UCT.USER_ADDRESS_CODE AS USER_ADDRESS_CODE
+				        ,UCT.USER_ADDRESS AS USER_ADDRESS
+				        ,UCT.USER_SUB_ADDRESS AS USER_SUB_ADDRESS
+				        ,IT.USER_ID AS SELLER_ID
+				        ,ROWNUM-1 AS CART_NUM
+				    FROM (SELECT CT.CART_ITEMCODE AS CART_ITEMCODE
+				                ,CT.CART_ID AS CART_ID
+				                ,CT.CART_COUNT AS CART_COUNT
+				                ,UT.USER_ADDRESS_CODE AS USER_ADDRESS_CODE
+				                ,UT.USER_ADDRESS AS USER_ADDRESS
+				                ,UT.USER_SUB_ADDRESS AS USER_SUB_ADDRESS
+				            FROM (SELECT CART_ITEMCODE
+				                        ,CART_ID
+				                        ,CART_COUNT
+				                    FROM TEST_CART
+				                    WHERE CART_ID = #{cart_id, jdbcType=VARCHAR}) CT
+				                ,USER_TBL UT
+				            WHERE CT.CART_ID = UT.USER_ID) UCT
+				        ,ITEM IT
+				    WHERE UCT.CART_ITEMCODE = IT.ITEM_CODE
+		</select>
+		
+		
+		<!-- 카트목록 삭제 -->
+		<delete id="deleteCart">
+			DELETE TEST_CART
+			    WHERE CART_ITEMCODE = #{cart_itemcode, jdbcType=VARCHAR}
+			    AND CART_ID = #{cart_id, jdbcType=VARCHAR}
+		</delete>
+		
+		
+		<!-- 수량 변경 -->
+		<update id="modifyCount">
+			UPDATE TEST_CART SET CART_COUNT = #{cart_count, jdbcType=VARCHAR}
+							 WHERE CART_ITEMCODE = #{cart_itemcode, jdbcType=VARCHAR}
+						     AND CART_ID = #{cart_id, jdbcType=VARCHAR}
+		</update>
+		
+		
+		
+		<!-- 카트 목록에서 체크한 것들 주문페이지로 넘기기 -->
+		<select id="chkCart" resultType="com.marketkurly.www.common.user.myPage.myCart.domain.CartListVO">
+			    SELECT  IT.ITEM_CODE AS CART_ITEMCODE
+				        ,UCT.CART_ID AS CART_ID
+				        ,IT.ITEM_NAME AS ITEM_NAME
+				        ,IT.ITEM_PRICE*UCT.CART_COUNT AS ITEM_PRICE
+				        ,IT.ITEM_PRICE AS ORI_PRICE
+				        ,IT.ORI_DATE AS ORI_DATE
+				        ,IT.ITEM_IMAGE AS ITEM_IMAGE
+				        ,UCT.CART_COUNT AS CART_COUNT
+				        ,UCT.USER_ADDRESS_CODE AS USER_ADDRESS_CODE
+				        ,UCT.USER_ADDRESS AS USER_ADDRESS
+				        ,UCT.USER_SUB_ADDRESS AS USER_SUB_ADDRESS
+				        ,IT.USER_ID AS SELLER_ID
+				        ,ROWNUM-1 AS CART_NUM
+				    FROM (SELECT CT.CART_ITEMCODE AS CART_ITEMCODE
+				                ,CT.CART_ID AS CART_ID
+				                ,CT.CART_COUNT AS CART_COUNT
+				                ,UT.USER_ADDRESS_CODE AS USER_ADDRESS_CODE
+				                ,UT.USER_ADDRESS AS USER_ADDRESS
+				                ,UT.USER_SUB_ADDRESS AS USER_SUB_ADDRESS
+				            FROM (SELECT CART_ITEMCODE
+				                        ,CART_ID
+				                        ,CART_COUNT
+				                    FROM TEST_CART
+				                    WHERE (CART_ID = #{cart_id, jdbcType=VARCHAR})
+				                    AND <foreach collection="chkArray" item="item" index="index" separator="or" open="(" close=")" >
+					                    CART_ITEMCODE = #{item, jdbcType=VARCHAR}
+					                    </foreach>
+					                    ) CT
+				                ,USER_TBL UT
+				            WHERE CT.CART_ID = UT.USER_ID) UCT
+				        ,ITEM IT
+				    WHERE UCT.CART_ITEMCODE = IT.ITEM_CODE
+		</select>
+		
+	<select id="delivery" resultType="int">
+	 	SELECT PRICE
+			FROM VALUE_TBL
+	</select>
+
+</mapper>

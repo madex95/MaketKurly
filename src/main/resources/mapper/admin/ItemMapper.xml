@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+	<mapper namespace="com.marketkurly.www.admin.item.mapper.ItemMapper">
+		
+		<!-- 상품 리스트 조회 -->
+		<select id="getItemList" resultType="com.marketkurly.www.admin.item.domain.Item">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , A.ITEM_STOCK
+				 , A.ABLED
+				 , B.NAME AS ITEM_CGCODE
+				 FROM ITEM A
+				 	, CATEGORY B
+				 WHERE A.ITEM_CGCODE = B.CODE
+				 ORDER BY ITEM_CODE
+		</select>
+		
+		<!-- 판매자 상품 리스트 조회 -->
+		<select id="getMyItemList" parameterType="String" resultType="com.marketkurly.www.admin.item.domain.Item">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , A.ITEM_STOCK
+				 , A.ABLED
+				 , B.NAME AS ITEM_CGCODE
+				 FROM ITEM A
+				 	, CATEGORY B
+				 WHERE A.ITEM_CGCODE = B.CODE
+				 AND A.USER_ID = #{user_id}
+				 ORDER BY ITEM_CODE
+		</select>
+		
+		<!-- 상품 코드 유무 검사 -->
+		<select id="exitItemCode" parameterType="String" resultType="String">
+			SELECT ITEM_CODE
+				 FROM ITEM
+				 WHERE ITEM_CODE=#{ITEM_CODE}
+		</select>
+		
+		<!-- 상품 추가 -->
+		<insert id="addItem" parameterType="com.marketkurly.www.admin.item.domain.Item">
+			INSERT
+				INTO ITEM(
+					  ITEM_CODE
+					, ITEM_NAME
+					, ITEM_PRICE
+					, ITEM_CGCODE
+					, ITEM_STOCK
+					, ITEM_DETAIL
+					, ITEM_IMAGE
+					, USER_ID
+					, ABLED
+				)
+				VALUES(
+					  #{item_code}
+					, #{item_name}
+					, #{item_price}
+					, #{item_cgcode}
+					, #{item_stock}
+					, #{item_detail}
+					, #{item_image, jdbcType=VARCHAR}
+					, #{user_id}
+					, #{abled}
+				)
+		</insert>
+		
+		<!-- 카테고리 리스트 조회 -->
+		<select id="getCategoryList" resultType="com.marketkurly.www.admin.category.domain.Category">
+			SELECT CODE
+				 , NAME
+				 , ABLED
+				 FROM CATEGORY
+				 ORDER BY CODE
+		</select>
+		
+		<!-- 상품 사용여부 변경 -->
+		<update id="updateItemAbled" parameterType="String">
+			UPDATE ITEM
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE ITEM_CODE=#{item_code}
+		</update>
+		
+		<!-- 상품 정보 조회 -->
+		<select id="getItemInfo" parameterType="String" resultType="com.marketkurly.www.admin.item.domain.Item">
+			SELECT ITEM_CODE
+			     , ITEM_NAME
+			     , ITEM_PRICE
+			     , ITEM_CGCODE
+			     , ITEM_STOCK
+			     , ITEM_DETAIL
+			     , ITEM_IMAGE
+			     , ABLED
+			     FROM ITEM
+			    WHERE ITEM_CODE=#{item_code}
+		</select>
+		
+		<!-- 상품 정보 수정 -->
+		<update id="updateItem" parameterType="com.marketkurly.www.admin.item.domain.Item">
+			UPDATE ITEM
+				SET ITEM_NAME = #{item_name}
+				  , ITEM_PRICE = #{item_price}
+				  , ITEM_CGCODE = #{item_cgcode}
+				  , ITEM_STOCK = #{item_stock}
+				  , ABLED = #{abled}
+				  , STARTDATE = SYSDATE
+				WHERE ITEM_CODE = #{item_code}
+		</update>
+		
+		<!-- 상품 이미지 조회 -->
+		<select id="getItemImg" parameterType="String" resultType="String">
+			SELECT ITEM_IMAGE
+				FROM ITEM
+				WHERE ITEM_CODE=#{item_code}
+		</select>
+		
+		<!-- 상품 생성날짜 조회 -->
+		<select id="getItemOriDate" parameterType="String" resultType="String">
+			SELECT TO_CHAR(ORI_DATE,'YYYY-MM-DD')
+				FROM ITEM
+				WHERE ITEM_CODE=#{item_code}
+		</select>
+		
+		<!-- 상품 이미지 수정 -->
+		<update id="updateItemImage" parameterType="com.marketkurly.www.admin.item.domain.Item">
+			UPDATE ITEM
+				SET ITEM_IMAGE=#{item_image}
+				WHERE ITEM_CODE = #{item_code}
+		</update>
+		
+		<!-- 상품 수정 전 정보 가져오기 -->
+		<select id="getItemInfoAll" parameterType="String" resultType="com.marketkurly.www.admin.item.domain.Item">
+			SELECT ITEM_CODE
+				 , ITEM_NAME
+				 , ITEM_PRICE
+				 , ITEM_CGCODE
+				 , ITEM_DETAIL
+				 , ITEM_IMAGE
+				 , STARTDATE
+				 , ORI_DATE
+				 FROM ITEM
+				 WHERE ITEM_CODE = #{item_code}
+		</select>
+		
+		<!-- 상품 이력 정보 추가 -->
+		<insert id="insertItemHistory" parameterType="com.marketkurly.www.admin.item.domain.Item">
+			INSERT 
+				INTO ITEM_HISTORY(
+					ITEM_CODE
+					, ITEM_NAME
+					, ITEM_PRICE
+					, ITEM_CGCODE
+					, ITEM_DETAIL
+					, ITEM_IMAGE
+					, STARTDATE
+					, ORI_DATE
+				) VALUES(
+					#{item_code}
+					, #{item_name}
+					, #{item_price}
+					, #{item_cgcode}
+					, #{item_detail}
+					, #{item_image}
+					, #{startDate}
+					, #{ori_date}
+				)
+		</insert>
+		
+		<!-- 권한 검사 -->
+		<select id="isGrantGetItem" parameterType = "com.marketkurly.www.admin.grant.domain.ExGrantAbledList" resultType="String">
+			SELECT EXGRANT_CODE
+			    FROM EXGRANTABLEDLIST
+			    WHERE GRANT_CODE = 
+			            (SELECT USER_AUTH
+			                FROM USER_TBL
+			                WHERE USER_ID=#{grant_code})
+			    AND EXGRANT_CODE = #{exGrant_code}
+		</select>
+		
+		
+		<!-- 상품 조회 -->
+		<select id="getItemInfoCG" parameterType="String" resultType="com.marketkurly.www.admin.item.domain.Item">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , A.ITEM_STOCK
+				 , A.ITEM_DETAIL
+				 , A.ITEM_IMAGE
+				 , A.ABLED
+				 , A.USER_ID
+				 , A.ORI_DATE
+				 , B.NAME AS ITEM_CGCODE
+				 FROM ITEM A
+				 	, CATEGORY B
+				 WHERE A.ITEM_CGCODE = B.CODE
+				 AND ITEM_CODE = #{item_code}
+		</select>
+		
+		<!-- 상품 이력 조회 -->
+		<select id="getItemHistoryList" resultType="com.marketkurly.www.admin.item.domain.ItemHistory">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , B.NAME 			AS ITEM_CGCODE
+				 , A.STARTDATE
+				 , A.ENDDATE
+				 FROM ITEM_HISTORY  A
+				 	, CATEGORY		B
+				 WHERE A.ITEM_CGCODE = B.CODE
+				 AND ITEM_CODE=#{item_code}
+		</select>
+		
+		<!-- 상품 이력 검색 -->
+		<select id="searchItemHistory" parameterType = "com.marketkurly.www.admin.item.domain.ItemHistory" resultType="com.marketkurly.www.admin.item.domain.ItemHistory">
+			SELECT A.ITEM_CODE
+				 , A.ITEM_NAME
+				 , A.ITEM_PRICE
+				 , B.NAME 		AS ITEM_CGCODE
+				 , A.STARTDATE
+				 , A.ENDDATE
+				 FROM ITEM_HISTORY	A
+				 	, CATEGORY		B
+				 WHERE A.ITEM_CODE = #{item_code}
+				 AND A.ITEM_CGCODE = B.CODE
+				 AND TO_CHAR(A.STARTDATE,'YYYY-MM-DD') <![CDATA[ <= ]]> TO_CHAR(#{endDate},'YYYY-MM-DD')
+				 AND TO_CHAR(A.ENDDATE,'YYYY-MM-DD') <![CDATA[ >= ]]> TO_CHAR(#{startDate},'YYYY-MM-DD')
+		</select>
+	</mapper>

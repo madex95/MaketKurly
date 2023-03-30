@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.marketkurly.www.item.main.mapper.ItemListMapper">
+  <!-- criteria(검색조건) -->
+			<sql id="criteria">
+		    <if test="keyword != null">
+			    item_name like '%' || #{keyword} || '%' and
+			</if>
+	</sql>
+    <!-- 상품 검색 -->
+      <select id="GetitemList" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+      
+   	<![CDATA[
+          select * from (
+               select rownum as rn, item_code, item_name,(select name from category where item.item_cgcode = category.code) name,item_cgcode,
+		          item_price, item_detail, item_image , ori_date
+            	from item where
+        ]]>       
+   		         <include refid="criteria"></include>
+	    <!--  	  
+            <if test="keyword != null">
+                item_name like '%'||#{keyword}||'%' and
+            </if> 
+             --> 	
+    <![CDATA[        
+             rownum <= #{pageNum} * #{amount}
+            )
+       where rn > (#{pageNum} - 1) * #{amount}
+      ]]>
+
+      
+      </select>
+  <!-- 상품 총 개수 -->
+	<select id="itemGetTotal" resultType="int" parameterType="com.marketkurly.www.item.main.domain.ItemVO">
+      			
+      			select COUNT(*) from item 
+      			<!-- ITEM_NAME LIKE '%' || #{keyword} || '%' -->
+      			<!--  <include refid="criteria"></include>-->
+      			<!-- item_code != null -->
+    <!--  
+          <if test="keyword != null">
+           where item_name like '%' || #{keyword} || '%'
+          </if>
+  -->
+      </select> 
+      
+      <select id="GetitemList2" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+      
+   	<![CDATA[
+         	 select * from (
+               select rownum as rn, item_code, item_name,(select name from category where item.item_cgcode = category.code) name,item_cgcode,
+		          item_price, item_detail, item_image , ori_date
+            	from item where
+        ]]>       
+   
+   		
+
+    <![CDATA[        
+             rownum <= #{pageNum} * #{amount}
+            )
+       where rn > (#{pageNum} - 1) * #{amount}
+      ]]>
+
+      
+      </select>
+      	<select id="itemGetTotal2" resultType="int" parameterType="com.marketkurly.www.item.main.domain.ItemVO">
+      			
+      			select COUNT(*) from (select * from item where item_cgcode = #{code , jdbcType=VARCHAR})
+      			<!-- ITEM_NAME LIKE '%' || #{keyword} || '%' -->
+      			<!--  <include refid="criteria"></include>-->
+      			<!-- item_code != null -->
+    <!--  
+          <if test="keyword != null">
+           where item_name like '%' || #{keyword} || '%'
+          </if>
+  -->
+      </select> 
+      
+      <!--  
+    <select id = "getCateCode1" resultType="com.marketkurly.www.item.main.domain.CateVO">
+    select code,name from category where code in ('c-001','c-006','c-003','c-004')
+        
+    </select>
+ -->
+
+
+	<select id="getItemCode" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+			select item_code, item_name  from item
+		where item_code = #{item_code ,  jdbcType=VARCHAR}
+	</select>
+
+	
+	
+	
+	<!-- 검색 대상 카테고리 리스트 -->
+	<select id="getCateList" resultType="String">
+	<!-- 
+	 <![CDATA[  
+		select DISTINCT item_cgcode from item where 
+		  ]]>
+		    <![CDATA[  
+			item_name like '%' 
+				   ]]>
+ -->
+  	</select>
+	<!-- 카테고리 정보 -->	
+	
+	<select id="getCateInfo" resultType="com.marketkurly.www.item.main.domain.CateFilterDTO">
+	
+			
+	
+	
+	<!--  
+	    <![CDATA[  
+		select DISTINCT a.item_cgcode,b.name from item a left join category b on a.item_cgcode = b.code 
+				where 	
+		   ]]>
+		
+			<include refid="criteria"></include>
+		  <![CDATA[   
+		 a.item_cgcode = #{item_cgcode , jdbcType=VARCHAR} group by a.item_cgcode, b.name
+	  ]]>
+	  -->
+	</select>
+
+   </mapper>

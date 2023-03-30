@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.sales.mapper.SalesMapper">
+		<!-- 이번 달 상품 판매 개수 조회 -->
+		<select id="getSalesItemCount" resultType="com.marketkurly.www.admin.sales.domain.SalesList">
+			<![CDATA[
+			SELECT ITEM_CODE
+			     , ITEM_NAME
+			     , PRICE
+			     , SUM(ORDER_COUNT) AS TOTAL_COUNT
+			     FROM (SELECT O.ORDER_ITEMCODE AS ITEM_CODE
+			             , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_NAME
+			                    WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_NAME
+			                END ITEM_NAME
+			             , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                    WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                END PRICE
+			            , O.ORDER_COUNT
+			            FROM ORDERLIST O
+			                LEFT JOIN ITEM I
+			                ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                LEFT JOIN ITEM_HISTORY H
+			                ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			            WHERE O.ORDER_DATE >= TRUNC(SYSDATE, 'MM')
+			    )
+			    GROUP BY ITEM_CODE, ITEM_NAME, PRICE
+			    ORDER BY TOTAL_COUNT DESC
+			]]>
+		</select>
+		
+		<!-- 이번 달 판매자 상품 판매 개수 조회 -->
+		<select id="getMySalesItemCount" parameterType="String" resultType="com.marketkurly.www.admin.sales.domain.SalesList">
+			<![CDATA[
+			SELECT ITEM_CODE
+			     , ITEM_NAME
+			     , PRICE
+			     , SUM(ORDER_COUNT) AS TOTAL_COUNT
+			     FROM (SELECT O.ORDER_ITEMCODE AS ITEM_CODE
+			             , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_NAME
+			                    WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_NAME
+			                END ITEM_NAME
+			             , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                    WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                END PRICE
+			            , O.ORDER_COUNT
+			            FROM ORDERLIST O
+			                LEFT JOIN ITEM I
+			                ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                LEFT JOIN ITEM_HISTORY H
+			                ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			            WHERE O.ORDER_DATE >= TRUNC(SYSDATE, 'MM')
+			            AND I.USER_ID = #{user_id}
+			    )
+			    GROUP BY ITEM_CODE, ITEM_NAME, PRICE
+			    ORDER BY TOTAL_COUNT DESC
+			]]>
+		</select>
+		
+	     <!-- 권한 검사 -->
+		<select id="isGrantGetSales" parameterType = "com.marketkurly.www.admin.grant.domain.ExGrantAbledList" resultType="String">
+			SELECT EXGRANT_CODE
+			    FROM EXGRANTABLEDLIST
+			    WHERE GRANT_CODE = 
+			            (SELECT USER_AUTH
+			                FROM USER_TBL
+			                WHERE USER_ID=#{grant_code})
+			    AND EXGRANT_CODE = #{exGrant_code}
+		</select>
+		
+		<!-- 관리자 일벌 매출액 그래프 -->
+		<select id = "getDateSales" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'MM-DD') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(SYSDATE - LEVEL + 1, 'MM-DD') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= 20
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+		
+		<!-- 판매자 일벌 매출액 그래프 -->
+		<select id = "getMyDateSales" parameterType="String" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'MM-DD') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			           			AND I.USER_ID = #{user_id}
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(SYSDATE - LEVEL + 1, 'MM-DD') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= 20
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+		
+		<!-- 관리자 월별 매출액 -->
+		<select id="getMonthSales" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'YYYY-MM') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(ADD_MONTHS(SYSDATE, - LEVEL + 1), 'YYYY-MM') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= 6
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+		
+		<!-- 판매자 매출액 -->
+		<select id="getMyMonthSales" parameterType="String" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'YYYY-MM') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			           			AND I.USER_ID = #{user_id}
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(ADD_MONTHS(SYSDATE, - LEVEL + 1), 'YYYY-MM') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= 6
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+		
+		
+		<!-- 관리자 일벌 매출액 -->
+		<select id = "getAllDaySales" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'MM-DD') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(SYSDATE - LEVEL + 1, 'MM-DD') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= (SELECT CEIL(SYSDATE-ORDER_DATE)
+                                                        FROM ORDERLIST
+                                                        WHERE ROWNUM=1)
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES DESC
+			]]>
+		</select>
+		
+		<!-- 판매자 일벌 매출액 -->
+		<select id = "getMyAllDaySales" parameterType="String" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'MM-DD') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			           			AND I.USER_ID = #{user_id}
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(SYSDATE - LEVEL + 1, 'MM-DD') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= (SELECT CEIL(SYSDATE-ORDER_DATE)
+                                                        FROM ORDERLIST
+                                                        WHERE ROWNUM=1)
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES DESC
+			]]>
+		</select>
+		
+		<!-- 관리자 월별 매출액 -->
+		<select id="getAllMonthSales" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'YYYY-MM') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(ADD_MONTHS(SYSDATE, - LEVEL + 1), 'YYYY-MM') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= (SELECT CEIL(SYSDATE-ORDER_DATE)/12
+                                                            FROM ORDERLIST
+                                                            WHERE ROWNUM=1)
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+		
+		<!-- 판매자 월별 매출액 -->
+		<select id="getMyAllMonthSales" resultType="com.marketkurly.www.admin.sales.domain.DateSales">
+			<![CDATA[
+			SELECT B.DATES
+			     , NVL(SUM(A.PRICE * A.ORDER_COUNT),0) AS VALUE
+			     FROM ( SELECT  TO_CHAR(O.ORDER_DATE,'YYYY-MM') AS DATES
+			                 , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			                        WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			                    END PRICE
+			                , O.ORDER_COUNT
+			                FROM ORDERLIST O
+			                        LEFT JOIN ITEM I
+			                        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			                        LEFT JOIN ITEM_HISTORY H
+			                        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			                        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			                    WHERE ORDER_STATE = '주문완료'
+			           			AND I.USER_ID = #{user_id}
+			                    ORDER BY ORDER_DATE DESC
+			    ) A
+			    RIGHT JOIN (SELECT TO_CHAR(ADD_MONTHS(SYSDATE, - LEVEL + 1), 'YYYY-MM') AS DATES
+			                       FROM DUAL 
+			                    CONNECT BY LEVEL <= (SELECT CEIL(SYSDATE-ORDER_DATE)/12
+                                                            FROM ORDERLIST
+                                                            WHERE ROWNUM=1)
+			    ) B
+			    ON A.DATES = B.DATES
+			    GROUP BY B.DATES
+			    ORDER BY B.DATES
+			]]>
+		</select>
+	</mapper>

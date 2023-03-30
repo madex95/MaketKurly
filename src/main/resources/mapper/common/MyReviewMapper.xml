@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.marketkurly.www.common.user.myPage.myReview.mapper.MyReviewMapper">
+
+	<select id="reviewPage" resultType="com.marketkurly.www.common.user.myPage.myReview.domain.MyReviewVO"
+							parameterType="com.marketkurly.www.common.center.domain.Criteria">
+		    
+	SELECT REVIEW_ITEMCODE
+	      ,REVIEW_ID
+	      ,REVIEW_GRADE
+	      ,REVIEW_DATE
+	      ,REVIEW_CONTENT
+	      ,ITEM_NAME
+	      ,ITEM_IMAGE
+	      ,ORI_DATE
+	    FROM (SELECT REVIEW_ITEMCODE
+	                ,REVIEW_ID
+	                ,REVIEW_GRADE
+	                ,REVIEW_DATE
+	                ,REVIEW_CONTENT
+	                ,ITEM_NAME
+	                ,ITEM_IMAGE
+	                ,ORI_DATE
+	                ,ROW_NUMBER() OVER(ORDER BY REVIEW_DATE DESC) AS REVIEW_NUM
+	            FROM REVIEW RE
+	                ,ITEM IT
+	            WHERE RE.REVIEW_ITEMCODE = IT.ITEM_CODE
+	            AND RE.REVIEW_ID = #{review_id, jdbcType=VARCHAR} )
+	    WHERE REVIEW_NUM BETWEEN #{rowStart} AND #{rowEnd}
+							
+	</select>
+	
+	
+	<select id="reviewCount" resultType="int">
+			SELECT COUNT(REVIEW_ID)
+				FROM REVIEW
+				WHERE REVIEW_ID = #{review_id, jdbcType=VARCHAR}
+	</select>
+	
+</mapper>

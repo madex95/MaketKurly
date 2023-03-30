@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="68" height="68" viewBox="0 0 68 68">
+    <defs>
+        <linearGradient id="gxy9nl1ofa" x1="18.891%" x2="84.668%" y1="11.289%" y2="88.779%">
+            <stop offset="0%" stop-color="#EF68FF"/>
+            <stop offset="100%" stop-color="#7760FF"/>
+        </linearGradient>
+    </defs>
+    <g fill="none" fill-rule="evenodd">
+        <g>
+            <g>
+                <g transform="translate(-362 -383) translate(195 289) translate(167 94)">
+                    <circle cx="34" cy="34" r="34" fill="url(#gxy9nl1ofa)"/>
+                    <g transform="translate(14.02 24.594)">
+                        <path fill="#FFF" d="M24.436 0c.978 0 1.642.717 1.642 1.582v19.26h-8.222v-.022c0-2.313-1.876-4.189-4.19-4.189-2.313 0-4.189 1.876-4.189 4.19v.021h-1.72c-1.257 0-1.536-.647-1.536-1.536V1.582C6.221.63 6.854 0 7.758 0h16.678z"/>
+                        <rect width="11" height="2" y="5" fill="#FFF" rx="1"/>
+                        <rect width="10" height="2" x="1" y="9" fill="#FFF" rx="1"/>
+                        <rect width="11" height="2" x="1" y="7" fill="#C6F" rx="1"/>
+                        <rect width="11" height="2" x="1" y="11" fill="#C766FF" rx="1"/>
+                        <path fill="#FFF" d="M35.204 5.994l4.165 5.496c.432.615.631.784.631 1.824v6.474c0 .586-.482 1.061-1.076 1.061H37.2v-.029c0-2.313-1.875-4.189-4.189-4.189s-4.19 1.876-4.19 4.19v.028h-.77V4.68h4.445c.947 0 1.803.076 2.709 1.315z"/>
+                        <circle cx="13.663" cy="20.842" r="1.764" fill="#FFF"/>
+                        <circle cx="33.019" cy="20.842" r="1.764" fill="#FFF"/>
+                    </g>
+                    <path fill="#FFF" d="M48.927 13.965c1.89.49 3.287 2.208 3.287 4.253 0 2.426-1.967 4.393-4.393 4.393-1.429 0-2.698-.683-3.5-1.74.352.093.722.142 1.104.142 2.426 0 4.393-1.967 4.393-4.393 0-.927-.287-1.788-.778-2.497z"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

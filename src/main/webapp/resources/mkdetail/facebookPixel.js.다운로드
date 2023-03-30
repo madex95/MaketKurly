@@ -1,0 +1,88 @@
+var fbpTracker = (function() {
+  var appCheck = window.webStatus.appCheck;
+  var i, len, actionData = {}, arrData = {};
+
+  var _fbpTracker = {
+      setAction: function(_event_name, _data){
+        if(appCheck) {
+          return false;
+        }
+        this.setData(_event_name, _data ? _data : '');
+      },
+      setData: function(_event_name, _data){
+          var valueSum = 0, eaSum = 0;
+
+          switch(_event_name){
+              case 'AddToCart' : // 장바구니담기
+                  actionData = {
+                      content_id: [],
+                      content_type: 'product',
+                      contents: [],
+                      currency: 'KRW'
+                  }
+
+                  len = _data.length;
+                  arrData = {};
+                  for(i = 0; i < len; i++){
+                      arrData.id = String(_data[0].parent_id);
+                      eaSum += parseInt(_data[i].ea, 10);
+                      valueSum += ( (_data[i].discounted_price || _data[i].discount_price)* _data[i].ea);
+                  }
+                  arrData.quantity = eaSum;
+                  actionData.content_id.push(arrData.id);
+                  actionData.contents.push(arrData);
+                  actionData.value = valueSum.toFixed(2)
+                  break;
+              case 'Purchase' : // 구매하기
+                  actionData = {
+                      content_id: [],
+                      content_type: 'product',
+                      contents: [],
+                      currency: 'KRW'
+                  }
+
+                  len = _data.length;
+                  for(i = 0; i < len; i++){
+                      arrData = {};
+                      arrData.id = String(_data[i].goodsno);
+                      arrData.quantity = parseInt(_data[i].ea, 10);
+                      actionData.content_id.push(arrData.id);
+                      actionData.contents.push(arrData);
+                      valueSum += ( (_data[i].discounted_price || _data[i].discount_price)* arrData.quantity);
+                  }
+                  actionData.value = valueSum.toFixed(2)
+                  break;
+              case 'ViewContent' : // 상품상세페이지보기
+                  arrData = {
+                      id: String(_data),
+                      quantity: 1
+                  }
+                  actionData = {
+                      content_id: [],
+                      content_type: 'product',
+                      contents: [],
+                  }
+                  actionData.content_id.push(_data);
+                  actionData.contents.push(arrData);
+                  break;
+              case 'CompleteRegistration' : // 회원가입완료
+                  actionData = {
+                      currency: 'KRW'
+                  }
+                  break;
+          }
+          this.sendEvent(_event_name, actionData);
+      },
+      sendEvent: function(eventName, actionData){
+          if(typeof fbq === 'undefined'){
+              document.addEventListener("pixelReady", function(e){
+                  fbq('track', eventName, actionData);
+              });
+          }else{
+              fbq('track', eventName, actionData);
+          }
+      }
+  }
+
+  return _fbpTracker
+})();

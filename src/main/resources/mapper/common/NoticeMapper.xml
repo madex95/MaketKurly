@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.marketkurly.www.common.center.notice.mapper.NoticeMapper">
+
+
+	  
+	<!-- 등록 -->
+	<insert id="regi">
+	INSERT INTO BOARD(
+				BOARD_CODE
+		        ,BOARD_ID
+		        ,BOARD_TITLE
+		        ,BOARD_PART
+		        ,BOARD_CONTENT
+		        ,BOARD_DATE
+		        ,BOARD_IMAGE
+		        <!-- ,MODIFY_DATE  -->
+	            ) 
+	            VALUES(
+	            		BOARD_SEQUENCE.NEXTVAL
+	                    ,#{board_id, jdbcType=VARCHAR}
+	                    ,#{board_title, jdbcType=VARCHAR}
+	                    ,#{board_part, jdbcType=VARCHAR}
+	                    ,#{board_content, jdbcType=VARCHAR}
+	                    ,#{board_date}
+	                    ,#{board_image, jdbcType=VARCHAR}
+	                   <!-- ,#{modify_date}  -->
+	            )
+	</insert>
+	
+	<!-- 목록조회 -->
+	<select id="boardPage" resultType="com.marketkurly.www.common.center.domain.CenterVO"
+							parameterType="com.marketkurly.www.common.center.domain.Criteria">
+					
+		<choose>
+			<when test="board_part == 'question'">
+		SELECT BOARD_CODE
+		        ,BOARD_ID
+		        ,BOARD_TITLE
+		        ,BOARD_CONTENT
+		        ,BOARD_DATE
+		        ,BOARD_IMAGE
+		        ,BOARD_PART
+		        ,BOARD_ITEMCODE
+		        ,BOARD_ORDERCODE
+		        ,BOARD_NUM
+		        ,FAKE_NUM
+		    FROM(SELECT BOARD_CODE
+		                ,BOARD_ID
+		                ,BOARD_TITLE
+		                ,BOARD_CONTENT
+		                ,BOARD_DATE
+		                ,BOARD_IMAGE
+		                ,BOARD_PART
+		                ,BOARD_ITEMCODE
+		                ,BOARD_ORDERCODE
+		                ,BOARD_NUM
+		                ,ROW_NUMBER() OVER(ORDER BY TB.BOARD_CODE) AS FAKE_NUM
+		            FROM (SELECT BOARD_CODE
+		                        ,BOARD_ID
+		                        ,BOARD_TITLE
+		                        ,BOARD_CONTENT
+		                        ,BOARD_DATE
+		                        ,BOARD_IMAGE
+		                        ,BOARD_PART
+		                        ,BOARD_ITEMCODE
+		                        ,BOARD_ORDERCODE
+		                        ,ROW_NUMBER() OVER(ORDER BY BD.BOARD_CODE DESC) AS BOARD_NUM
+		                        ,REPLY_NUM
+		                    FROM BOARD BD
+		                    LEFT JOIN REPLY RE 
+		                    ON BD.BOARD_CODE = RE.REPLY_BOARDNUM
+		                    WHERE BOARD_PART= #{board_part, jdbcType=VARCHAR}
+		                    AND BOARD_ID = #{board_id, jdbcType=VARCHAR}) TB
+		            ORDER BY BOARD_CODE DESC)
+		    WHERE BOARD_NUM BETWEEN #{rowStart} AND #{rowEnd}
+			</when>
+			
+		<otherwise>
+		 SELECT BOARD_CODE
+		        ,BOARD_ID
+		        ,BOARD_TITLE
+		        ,BOARD_CONTENT
+		        ,BOARD_DATE
+		        ,BOARD_IMAGE
+		        ,BOARD_PART
+		        ,BOARD_ITEMCODE
+		        ,BOARD_ORDERCODE
+                ,BOARD_NUM
+                ,FAKE_NUM
+		    FROM (SELECT BOARD_CODE
+                        ,BOARD_ID
+                        ,BOARD_TITLE
+                        ,BOARD_CONTENT
+                        ,BOARD_DATE
+                        ,BOARD_IMAGE
+                        ,BOARD_PART
+                        ,BOARD_ITEMCODE
+                        ,BOARD_ORDERCODE
+                        ,ROWNUM AS FAKE_NUM
+                        ,ROW_NUMBER() OVER(ORDER BY BOARD_CODE DESC) AS BOARD_NUM
+                    FROM BOARD 
+                    WHERE BOARD_PART= #{board_part, jdbcType=VARCHAR}
+                    ORDER BY BOARD_CODE DESC) 
+         	WHERE BOARD_NUM BETWEEN #{rowStart} AND #{rowEnd}
+            ORDER BY BOARD_CODE DESC
+		</otherwise>
+		</choose>		
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+								<!--  				
+		SELECT BOARD_CODE
+		        ,BOARD_ID
+		        ,BOARD_TITLE
+		        ,BOARD_CONTENT
+		        ,BOARD_DATE
+		        ,BOARD_IMAGE
+		        ,BOARD_PART
+		        ,BOARD_ITEMCODE
+		        ,BOARD_ORDERCODE
+		        ,BOARD_NUM
+                <if test="board_part == 'question'">
+                ,REPLY_NUM
+                ,ROW_NUMBER() OVER(ORDER BY BOARD_NUM DESC) AS FAKE_NUM
+                </if>
+                <if test="board_part != 'question'">
+                ,FAKE_NUM
+                </if>
+		    FROM (SELECT BOARD_CODE
+				        ,BOARD_ID
+				        ,BOARD_TITLE
+				        ,BOARD_CONTENT
+				        ,BOARD_DATE
+				        ,BOARD_IMAGE
+				        ,BOARD_PART
+				        ,BOARD_ITEMCODE
+		       			,BOARD_ORDERCODE
+				        <if test="board_part != 'question'">
+				        ,ROWNUM AS FAKE_NUM
+				        </if>
+				        ,ROW_NUMBER() OVER(ORDER BY BD.BOARD_CODE DESC) AS BOARD_NUM
+				        <if test="board_part == 'question'">
+				        ,RE.REPLY_NUM
+				        </if>
+				    FROM BOARD BD
+				    <choose>
+	    			<when test="board_part == 'question'">
+		            LEFT JOIN REPLY RE 
+		         	ON BD.BOARD_CODE = RE.REPLY_BOARDNUM
+					WHERE BOARD_PART= #{board_part, jdbcType=VARCHAR}
+					AND BOARD_ID = #{board_id, jdbcType=VARCHAR}) TB
+         	WHERE BOARD_NUM BETWEEN #{rowStart} AND #{rowEnd}
+    		ORDER BY BOARD_CODE DESC
+					</when>
+					<otherwise>
+					WHERE BOARD_PART= #{board_part, jdbcType=VARCHAR}) TB
+            WHERE TB.BOARD_NUM BETWEEN #{rowStart} AND #{rowEnd}
+		    ORDER BY BOARD_CODE DESC
+					</otherwise>
+					</choose>
+		    
+-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		    
+	</select>
+
+	
+	<!-- 
+	<select id="maxCode" resultType="int">
+	    SELECT BOARD_CODE
+        FROM (SELECT *
+                FROM TEST_BOARD
+                WHERE BOARD_PART
+                ORDER BY BOARD_CODE DESC)
+        WHERE ROWNUM=1
+        ORDER BY BOARD_CODE DESC;
+	</select>
+	 -->
+	
+	<select id="noticeCount" resultType="int">
+			SELECT COUNT(BOARD_CODE)
+				FROM BOARD
+				WHERE BOARD_CODE>0
+	    		AND BOARD_PART = #{board_part, jdbcType=VARCHAR}
+	</select>
+	<!--  -->
+	<select id="noticeMax" resultType="int">
+		SELECT LAST_NUMBER
+            FROM USER_SEQUENCES 
+            WHERE SEQUENCE_NAME = 'BOARD_SEQUENCE'
+	</select>
+	
+	
+	<!-- 게시물 내용 -->
+	<select id="noticeContent" parameterType="int" resultType="com.marketkurly.www.common.center.domain.CenterVO">
+	 SELECT BOARD_CODE
+		        ,BOARD_ID
+		        ,BOARD_TITLE
+		        ,BOARD_CONTENT
+		        ,BOARD_DATE
+		        ,BOARD_IMAGE
+		        ,BOARD_PART
+		        ,BOARD_ITEMCODE
+		        ,BOARD_ORDERCODE
+	 	FROM BOARD
+	 	WHERE BOARD_CODE = #{board_code}
+	</select>
+	
+	<!-- 파일첨부 없는 수정 -->
+	<update id="noticeModify1">
+		UPDATE BOARD
+			SET BOARD_TITLE = #{board_title, jdbcType=VARCHAR}
+				,BOARD_CONTENT = #{board_content, jdbcType=VARCHAR}
+			WHERE BOARD_ID = #{board_id, jdbcType=VARCHAR}
+			AND BOARD_CODE = #{board_code, jdbcType=VARCHAR}
+	</update>
+	
+	<!-- 파일첨부 있는 수정 -->
+	<update id="noticeModify2">
+		UPDATE BOARD
+			SET BOARD_TITLE = #{board_title, jdbcType=VARCHAR}
+				,BOARD_CONTENT = #{board_content, jdbcType=VARCHAR}
+				,BOARD_IMAGE = #{board_image, jdbcType=VARCHAR}
+			WHERE BOARD_ID = #{board_id, jdbcType=VARCHAR}
+			AND BOARD_CODE = #{board_code, jdbcType=VARCHAR}
+	</update>
+	
+	<select id="image" resultType="String">
+	SELECT BOARD_IMAGE
+		FROM BOARD 
+		WHERE BOARD_CODE=#{board_code, jdbcType=VARCHAR}
+	</select>
+	
+	
+	<delete id="noticeDelete">
+		DELETE FROM BOARD
+			WHERE BOARD_CODE = #{board_code}
+	</delete>
+
+
+</mapper>

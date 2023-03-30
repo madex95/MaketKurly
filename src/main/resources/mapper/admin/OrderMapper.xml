@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.order.mapper.OrderMapper">
+     
+	     <!-- 권한 검사 -->
+		<select id="isGrantGetSales" parameterType = "com.marketkurly.www.admin.grant.domain.ExGrantAbledList" resultType="String">
+			SELECT EXGRANT_CODE
+			    FROM EXGRANTABLEDLIST
+			    WHERE GRANT_CODE = 
+			            (SELECT USER_AUTH
+			                FROM USER_TBL
+			                WHERE USER_ID=#{grant_code})
+			    AND EXGRANT_CODE = #{exGrant_code}
+		</select>
+	
+		<!-- 주문내역 조회 -->
+		<select id="getOrderList" resultType="com.marketkurly.www.admin.order.domain.OrderList">
+			<![CDATA[
+			SELECT O.ORDER_CODE
+			     , O.ORDER_DATE
+			     , O.ORDER_ITEMCODE AS ITEM_CODE
+			     , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_NAME
+			            WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_NAME
+			        END ITEM_NAME
+			     , O.ORDER_ID AS USER_ID
+			     , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			            WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			        END PRICE
+			    , O.ORDER_COUNT
+			    , O.ORDER_STATE
+			    , O.ADDRESS
+			    FROM ORDERLIST O
+			        LEFT JOIN ITEM I
+			        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			        LEFT JOIN ITEM_HISTORY H
+			        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			    ORDER BY ORDER_DATE DESC
+			]]>
+		</select>
+		
+		<!-- 판매자 주문내역 조회 -->
+		<select id="getMyOrderList" parameterType="String" resultType="com.marketkurly.www.admin.order.domain.OrderList">
+			<![CDATA[
+			SELECT O.ORDER_CODE
+			     , O.ORDER_DATE
+			     , O.ORDER_ITEMCODE AS ITEM_CODE
+			     , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_NAME
+			            WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_NAME
+			        END ITEM_NAME
+			     , O.ORDER_ID AS USER_ID
+			     , CASE WHEN O.ORDER_DATE >= I.STARTDATE THEN I.ITEM_PRICE
+			            WHEN O.ORDER_DATE < I.STARTDATE THEN H.ITEM_PRICE
+			        END PRICE
+			    , O.ORDER_COUNT
+			    , O.ORDER_STATE
+			    , O.ADDRESS
+			    FROM ORDERLIST O
+			        LEFT JOIN ITEM I
+			        ON O.ORDER_ITEMCODE = I.ITEM_CODE
+			        LEFT JOIN ITEM_HISTORY H
+			        ON O.ORDER_ITEMCODE = H.ITEM_CODE
+			        AND O.ORDER_DATE BETWEEN H.STARTDATE AND H.ENDDATE
+			    WHERE USER_ID = #{user_id}
+			    ORDER BY ORDER_DATE DESC
+			]]>
+		</select>
+		
+		<!-- 주문 취소 -->
+		<update id="orderCancel">
+			UPDATE ORDERLIST
+				SET ORDER_STATE='주문취소'
+				WHERE ORDER_CODE = #{order_code}
+				AND ORDER_ITEMCODE = #{item_code}
+		</update>
+	</mapper>

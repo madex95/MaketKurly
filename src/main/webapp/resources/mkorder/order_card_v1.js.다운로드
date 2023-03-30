@@ -1,0 +1,360 @@
+Vue.component('card-select',{
+  props:['cardData', 'currentCode', 'installCard', 'cardName', 'cardInstall', 'selectedCard', 'install', 'selectedInstall', 'pointCard', 'cardDescription', 'tossPaymentsBenefitTitle', 'tossPaymentsBenefitDescription', 'isCardShow', 'isInstallShow'],
+  template:'\
+    <div>\
+        <div class="card_select">\
+            <div class="select_box">\
+                <strong class="tit" @click="layerSelect(\'card\')">{{ selectedCard != \'\' ?  cardNameShow(selectedCard) : \'카드를 선택해주세요\'}}</strong>\
+                <input type="hidden" name="lguplus_card_code" :value="selectedCard">\
+                <ul class="list" :class="isCardShow ? \'on\' : \'off\'">\
+                    <li v-for="card in cardData">\
+                      <a :class="card.credit_card_vendor_code === selectedCard ? \'on\' : \'\'" @click="selecEvent(card.credit_card_vendor_code, \'card\')">{{ cardNameShow(card.credit_card_vendor_code) }}</a>\
+                    </li>\
+                </ul>\
+            </div>\
+            <div class="select_box">\
+                <strong class="tit" :class="{off : selectedCard == \'\'}" @click="layerSelect(\'install\')">{{ selectedInstall != \'\' ? changeString(selectedInstall, selectedCard) : \'할부기간을 선택해주세요\' }}</strong>\
+                <input type="hidden" name="lguplus_card_installment_month" :value="selectedInstall">\
+                <ul class="list" :class="isInstallShow ? \'on\' : \'off\'">\
+                  <li>\
+                    <a :class="\'0\' === selectedInstall ? \'on\' : \'\'" @click="selecEvent(\'0\', \'install\')">일시불</a>\
+                  </li>\
+                    <li v-for="install in installCard">\
+                      <a :class="install === selectedInstall ? \'on\' : \'\'" @click="selecEvent(install, \'install\')">{{ changeString(install, selectedCard) }}</a>\
+                    </li>\
+                </ul>\
+            </div>\
+        </div>\
+        <div class="card_point" v-if="pointCard">\
+            <label class="inp_check label_check" :class="{checked : checked}">\
+                <input type="checkbox" name="lguplus_use_card_point" v-model="checked" :value="checked ? true : false">\
+                <span class="txt_checkbox">{{ pointCard.point_use_text }}</span>\
+            </label>\
+        </div>\
+        <div class="card_noti" v-if="cardDescription">{{ cardDescription }}</div>\
+        <div class="benefit_event" v-if="tossPaymentsBenefitTitle">\
+          <div id="cardBenefit" class="benefit on">\
+            <strong class="tit_benefit">{{ tossPaymentsBenefitTitle }}</strong>\
+            <p class="info_benefit" v-html="cardEventText(tossPaymentsBenefitDescription)"></p>\
+          </div>\
+        </div>\
+    </div>\
+    \
+    '
+  ,data:function(){
+    return {
+      checked: false,
+    }
+  }
+  ,methods:{
+    layerSelect: function(type) {
+      this.$emit('layer-render', type);
+    },
+    selecEvent: function(code, type) {
+      if(type === 'card') {
+        this.checked = false;
+      }
+      this.$emit('on-selected', code, type);
+
+      var selectedCoupon = $('#apply_coupon');
+      var selectedCouponPayment = selectedCoupon.find('[name="using_coupon_payment_gateways[]"]').val();
+      var creditCardId = selectedCoupon.find('[name=credit_card_id]').val();
+
+      if(type !== 'card' || !selectedCouponPayment || selectedCouponPayment === 'ALL') {
+        return;
+      }
+
+      if(code !== creditCardId) {
+        showSelectedCouponPaymentAlert(selectedCouponPayment, creditCardId);
+        return;
+      }
+    },
+    cardEventText: function(data){ // 카드혜택안내 - api 호출 문구
+      var msgBenefit = '';
+      var jLen = data.length;
+      for(var j = 0; j < jLen; j++){
+        msgBenefit += (j > 0 ? '<br>· ' : '· ' ) + data[j];
+      }
+      return '<span class="info">' + msgBenefit + '</span>';
+    },
+    cardNameShow : function(code){
+      for(var i = 0; i < this.cardData.length; i++){
+        if(this.cardData[i].credit_card_vendor_code === code){
+          if(this.cardData[i].free_installment){
+            return this.cardData[i].credit_card_vendor_name + ' (무이자)';
+          }else{
+            return this.cardData[i].credit_card_vendor_name;
+          }
+        }
+      }
+    },
+    changeString:function(num, code){
+      if(num == 0){
+        return '일시불';
+      }else{
+        for(var i = 0; i < this.cardData.length; i++){
+          if(this.cardData[i].credit_card_vendor_code === code){
+            if (this.cardData[i].free_interest_installment_range.indexOf(num) > -1) {
+              return num + '개월 (무이자)';
+            }
+            return num + '개월';
+          }
+        }
+      }
+    }
+  }
+});
+
+var cardSelect = new Vue({
+  el: '#cardSelect',
+  data: {
+    vendorsData: null, // 결제사 데이터
+    cardData : [], // 신용카드 데이터
+    currentCode : null,
+    installCard : [], // 카드회사별 월
+    selectedCard : '', // 선택된 카드사 코드
+    selectedInstall : '', // 선택된 할부월
+    cardDescription : null, // 무이자 관련 문구
+    pointCard : null, // point 사용 여부
+    accountNum : 0, // 결제금액필수
+    isCardEventBenefit: false, // 카드혜택안내 이벤트 1회만 실행
+    firstCheck : 0,
+    isCardShow: false,
+    isInstallShow: false,
+    benefitIcon: {
+      card: false,
+      kakao: false,
+      simple: false,
+    },
+    errors: [],
+    tossPaymentsBenefitTitle: null, // 토스페이먼츠 이벤트 타이틀
+    tossPaymentsBenefitDescription: [], // 토스페이먼츠 이벤트 내용
+    tossPaymentsPoint: null, // 토스페이먼츠 포인트유무
+    easyVendors: [],
+  },
+  methods: {
+    update:function(){
+      var that = this, data = null;
+
+      kurlyApi({
+        method :'get',
+        url :'v3/payment/vendor-events?total_price=' + that.accountNum + '&t_' + new Date().getTime(),
+      })
+      .then(function(response){
+        if(response.status !== 200) return;
+        that.vendorsData = response.data.data;
+
+        var iLen = that.vendorsData.length;
+
+        for (var i = 0; i < iLen; i++) {
+          var data = that.vendorsData[i];
+          if (data.pg_id === 'toss-payments') {
+
+            // KMF-836 쿠폰 결제수단 추가
+            // 서버로부터 받아 온 신용카드 결제 수단 목록을 받아서 common_js/constants/vendors 파일의 변수에 담음.
+            var jLen = data.credit_card_vendor_and_installments.length;
+            for(var j = 0; j < jLen; j++) {
+              var creditCard = data.credit_card_vendor_and_installments[j];
+              creditCards[creditCard.credit_card_vendor_code] = creditCard.credit_card_vendor_name;
+            }
+
+            that.cardData = data.credit_card_vendor_and_installments;
+          }
+        }
+
+        // 간편결제 이벤트 혜택 노출
+        that.cardEventBenefit();
+
+        // 선택한 결제 수단이 있는 경우
+        if (window.webStatus.isSession) {
+          that.currentPayment();
+        }
+      }.bind(this)).catch(function(err){
+        console.error(err);
+      });
+    },
+    currentPayment: function() { // 선택한 결제 수단이 있는경우
+      var that = this, data = null;
+      kurlyApi({
+        method :'get',
+        url :'v3/payment/preference?_t' + new Date().getTime(),
+      })
+      .then(function(response){
+        if(response.status !== 200) return;
+        data = response.data.data;
+
+        if (data.pg_id === 'toss-payments') {
+          that.currentCode = data.credit_card_vendor_code;
+          if(that.currentCode && that.firstCheck === 0){
+            that.firstCheck++;
+            that.selectedCard = that.currentCode;
+          }
+          that.onSelected(that.selectedCard , 'card');
+        }
+      }.bind(this)).catch(function(err){
+        console.error(err);
+      });
+    },
+    updateResultCode : function(){
+      var $self = this;
+      if($self.accountNum > 0){
+        if($self.selectedCard === '' && $self.accountNum > 0){
+          window.validateFocusAction('#titFocusMethod');
+          alert('신용카드를 선택해주세요')
+          return false;
+        }
+        if($self.selectedInstall === '' && $self.accountNum > 0){
+          window.validateFocusAction('#titFocusMethod');
+          alert('할부기간을 선택해 주세요')
+          return false;
+        }
+        return true
+      }else{
+        return true;
+      }
+    },
+    onSelected:function(code, type){
+      if(code === '') {
+        return;
+      }
+
+      if(type === 'card'){
+        // 카드 변경될때마다 초기화
+        this.installCard = [];
+        this.pointCard = null;
+        this.selectedInstall = '0';
+        this.cardDescription = false;
+
+        // 카드명 비교
+        var cardLength = this.cardData.length;
+        for(var i = 0; i < cardLength; i++){
+          var card = this.cardData[i];
+
+          if(card.credit_card_vendor_code === code){
+            this.selectedCard = code;
+            this.installCard = card.default_installment_range
+
+            // 할부기간
+            if(card.installment_description){
+              this.cardDescription = card.installment_description;
+            }
+          }
+        }
+
+        // 포인트 사용가능한 경우
+        var pointLen = this.tossPaymentsPoint !== null ? this.tossPaymentsPoint.length : null;
+        if (pointLen && pointLen > 0) {
+          for (var i = 0; i < pointLen; i ++) {
+            if (this.tossPaymentsPoint[i].credit_card_vendor_code === code) {
+              this.pointCard = this.tossPaymentsPoint[i];
+            }
+          }
+        }
+      }else{
+        this.selectedInstall = code;
+      }
+    },
+    cardEventBenefit: function(){
+      var that = this;
+
+      if(this.isCardEventBenefit){
+        return false;
+      }
+
+      var easyVendors = [];
+
+      for (var i = 0; i < that.vendorsData.length; i++) {
+        var data = that.vendorsData[i];
+
+        if (data.pg_id === 'kakao-pay' && data.event_title) {
+          that.benefitIcon.kakao = true;
+          that.cardEventBenefitEtc([data]);
+        }
+
+        if (data.pg_id === 'toss-payments') {
+          that.tossPaymentsPoint = data.credit_card_point_events;
+
+          if (data.event_title) {
+            that.tossPaymentsBenefitTitle = data.event_title;
+            that.tossPaymentsBenefitDescription = data.event_descriptions;
+            that.benefitIcon.card = true;
+          }
+        }
+
+        if (
+            data.pg_id !== 'kakao-pay'
+            && data.pg_id !== 'toss-payments'
+            && data.pg_id !== 'mobilians'
+            && data.event_title
+          ) {
+            easyVendors.push(data);
+        }
+      }
+
+      if(easyVendors && easyVendors.length > 0){
+        that.cardEventBenefitEtc(easyVendors);
+        that.benefitIcon.simple = true;
+      }
+
+      that.isCardEventBenefit = true;
+      that.couponeIconCheck(easyVendors);
+    },
+    couponeIconCheck: function(data) { // 혜택 아이콘 노출 영역
+      if(this.benefitIcon.kakao) {
+        $('#paymentBenefitKakao').show();
+        $('.kakaopay_benefit_icon').show();
+        $('#cardBenefit-kakaopay').addClass('on');
+      }
+      if(this.benefitIcon.card) {
+        $('#paymentBenefitCard').show();
+      }
+      if(this.benefitIcon.simple) {
+        $('#paymentBenefitSimple').show();
+        $('#cardBenefitSimple').addClass('on');
+      }
+
+      // 간편결제 '혜택' 문구 노출 영역
+      if(typeof data === 'undefined') {
+        return false;
+      }
+      for (var i = 0; i < data.length; i++) {
+        if ($('#simplePayments .' + data[i].pg_id) !== null) {
+          $('#simplePayments .' + data[i].pg_id).find('.txt_benefit').show();
+        }
+      }
+    },
+    // 카카오 페이 + 간편결제
+    cardEventBenefitEtc: function(data){
+      var iLen = data.length, msg = '';
+      for(var i = 0; i < iLen; i++){
+        // 초기화
+        var idSeletor = document.getElementById('cardBenefit-' + data[i].pg_id);
+        var jLen = data[i].event_descriptions.length;
+        msg = '';
+
+        // 혜택 문구
+        if(jLen > 0){
+          for(var j = 0; j < jLen; j++){
+            msg += ('&#183; ' + data[i].event_descriptions[j] + (j < jLen - 1 ? '<br>' : '' ));
+          }
+          var info = '<span class="info">' + msg + '</span>';
+        }
+        if (idSeletor !== null)  {
+          idSeletor.innerHTML =
+          '<strong class="tit_benefit">' + data[i].vendor_name + '</strong>' +
+          '<p class="sub_benefit">' + data[i].event_title + '</p>' +
+          '<p class="info_benefit">' + info + '</p>';
+        }
+      }
+    },
+    layerRender: function(type) {
+      if(type === 'card') {
+        this.isCardShow = !this.isCardShow;
+        this.isInstallShow = false;
+      }
+      if(type === 'install' && this.selectedCard !== '') {
+        this.isInstallShow = !this.isInstallShow;
+      }
+    }
+  }
+});

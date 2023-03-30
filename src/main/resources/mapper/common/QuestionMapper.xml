@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.marketkurly.www.common.center.question.mapper.QuestionMapper">
+	<select id="varReply" resultType="int">
+		SELECT COUNT(REPLY_BOARDNUM) 
+			FROM REPLY 
+			WHERE REPLY_BOARDNUM = #{board_code, jdbcType=VARCHAR}
+	</select>
+	
+	<select id="readReply" parameterType="int" resultType="com.marketkurly.www.common.center.question.domain.QuestionVO">
+
+			    SELECT TB.BOARD_CODE AS REPLY_BOARDNUM
+				        ,RE.REPLY_DATE AS REPLY_DATE
+				        ,RE.REPLY_CONTENT AS REPLY_CONTENT
+				        ,RE.REPLY_AUTHOR AS REPLY_AUTHOR
+				        ,TB.BOARD_PART AS BOARD_PART
+				        ,TB.MENU_CODE AS MENU_CODE
+				        ,TB.MENU_NAME AS MENU_NAME
+				    FROM (SELECT TB.BOARD_PART
+				               ,TB.BOARD_CODE
+				               ,BM.MENU_CODE
+				               ,BM.MENU_NAME
+				            FROM BOARD TB
+				                ,BOARD_MENU BM
+				            WHERE TB.BOARD_PART = BM.MENU_PART)TB
+				        ,REPLY RE
+				    WHERE RE.REPLY_BOARDNUM = TB.BOARD_CODE
+				    AND RE.REPLY_BOARDNUM = #{board_code, jdbcType=VARCHAR}
+	</select>
+</mapper>

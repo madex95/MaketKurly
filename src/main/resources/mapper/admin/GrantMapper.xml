@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.grant.mapper.GrantMapper">
+     	<!-- 권한 추가 -->
+     	<insert id="addGrant" parameterType="com.marketkurly.www.admin.grant.domain.Grant">
+     		INSERT
+     			INTO GRANTLIST(
+     				CODE
+     				, NAME
+     				, ABLED
+     			) VALUES(
+     				#{code}
+     				, #{name}
+     				, #{abled}
+     			)
+     	</insert>
+     	
+     	<!-- 권한 리스트 조회 -->
+     	<select id="getGrantList" resultType="com.marketkurly.www.admin.grant.domain.Grant">
+     		SELECT CODE
+     			 , NAME
+     			 , ABLED
+     			 FROM GRANTLIST
+     	</select>
+     	
+     	
+		<!-- 메뉴 조회 -->
+		<select id="getMenuList" resultType="com.marketkurly.www.admin.menu.domain.Menu">
+				SELECT MENU_CODE
+					 , MENU_NAME
+					 , UPDATE_ABLED
+					 , ABLED
+					 FROM MENU
+					 ORDER BY MENU_CODE
+		</select>
+		
+		
+		<!-- 메뉴별 소메뉴 조회 -->
+		<select id="getSubMenuList" parameterType="String" resultType="com.marketkurly.www.admin.menu.domain.SubMenu">
+				SELECT MENU_CODE
+					 , MENU_NAME
+					 , MENU_ADDRESS
+					 , MENU_PARENT
+					 , UPDATE_ABLED
+					 , ABLED
+					 FROM SUB_MENU
+					 WHERE MENU_PARENT= #{MENU_CODE}
+					 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 소메뉴 코드 조회 -->
+		<select id="getSubMenuCodeList" resultType="String">
+			SELECT MENU_CODE
+				FROM SUB_MENU
+		</select>
+		
+		<!-- 권한 검사 -->
+		<select id="getGrantAbled" parameterType="com.marketkurly.www.admin.grant.domain.GrantAbled" resultType="int">
+			SELECT COUNT(GRANT_CODE)
+				FROM GRANTABLED
+				WHERE GRANT_CODE = #{grant_code}
+				AND MENU_CODE = #{menu_code}
+		</select>
+		
+		<!-- 권한 추가 -->
+		<insert id="insertGrant" parameterType="com.marketkurly.www.admin.grant.domain.GrantAbled">
+			INSERT 
+				INTO GRANTABLED(
+					GRANT_CODE
+					, MENU_CODE
+				)VALUES(
+					#{grant_code}
+					,#{menu_code}
+				)
+		</insert>
+		
+		<!-- 권한 삭제 -->
+		<delete id="deleteGrant" parameterType="com.marketkurly.www.admin.grant.domain.GrantAbled">
+			DELETE
+				FROM GRANTABLED
+				WHERE GRANT_CODE = #{grant_code}
+				AND MENU_CODE = #{menu_code}
+		</delete>
+		
+		<!-- 권한 목록 조회 -->
+		<select id="getGrantAbledAll" parameterType="String" resultType="String">
+			SELECT MENU_CODE
+				FROM GRANTABLED
+				WHERE GRANT_CODE=#{code}
+		</select>
+		
+		<!-- 기타 권한 코드 유무 조회 -->
+		<select id="getExGrantAbledCount" parameterType="String" resultType="String">
+			SELECT CODE
+				FROM EX_GRANTABLED
+				WHERE CODE = #{code}
+		</select>
+		
+		<!-- 기타 권한 추가 -->
+		<insert id="addExGrantAbled" parameterType="com.marketkurly.www.admin.grant.domain.ExGrantAbled">
+			INSERT
+				INTO EX_GRANTABLED(
+					CODE
+					, NAME
+				) VALUES(
+					#{code}
+					,#{name}
+				)
+		</insert>
+		
+		<!-- 기타 권한 목록 조회 -->
+		<select id="getExGrantAbledList" resultType="com.marketkurly.www.admin.grant.domain.ExGrantAbled">
+			SELECT CODE
+				 , NAME
+				 FROM EX_GRANTABLED
+		</select>
+		
+		<!-- 기타 권한 코드 목록 조회 -->
+		<select id="getExGrantAbledNameList" resultType="String">
+			SELECT CODE
+				 FROM EX_GRANTABLED
+		</select>
+		
+		<!-- 권한 검사 -->
+		<select id="getExGrantAbled" parameterType="com.marketkurly.www.admin.grant.domain.ExGrantAbledList" resultType="int">
+			SELECT COUNT(GRANT_CODE)
+				FROM EXGRANTABLEDLIST
+				WHERE GRANT_CODE = #{grant_code}
+				AND EXGRANT_CODE = #{exGrant_code}
+		</select>
+		
+		<!-- 권한 추가 -->
+		<insert id="insertExGrant" parameterType="com.marketkurly.www.admin.grant.domain.ExGrantAbledList">
+			INSERT 
+				INTO EXGRANTABLEDLIST(
+					GRANT_CODE
+					, EXGRANT_CODE
+				)VALUES(
+					#{grant_code}
+					,#{exGrant_code}
+				)
+		</insert>
+		
+		<!-- 권한 삭제 -->
+		<delete id="deleteExGrant" parameterType="com.marketkurly.www.admin.grant.domain.ExGrantAbledList">
+			DELETE
+				FROM EXGRANTABLEDLIST
+				WHERE GRANT_CODE = #{grant_code}
+				AND EXGRANT_CODE = #{exGrant_code}
+		</delete>
+		
+		
+		<!-- 권한 목록 조회 -->
+		<select id="getExGrantAbledAll" parameterType="String" resultType="String">
+			SELECT EXGRANT_CODE
+				FROM EXGRANTABLEDLIST
+				WHERE GRANT_CODE=#{code}
+		</select>
+		
+		<!-- 권한 조회 -->
+		<select id="getGrantInfo" parameterType="String" resultType="com.marketkurly.www.admin.grant.domain.Grant">
+			SELECT CODE
+				 , NAME
+				 , ABLED
+				 FROM GRANTLIST
+				 WHERE CODE = #{code}
+		</select>
+		
+		<!-- 권한 수정 -->
+		<update id="updateGrant" parameterType="com.marketkurly.www.admin.grant.domain.Grant">
+			UPDATE GRANTLIST
+				SET NAME = #{name}
+					, ABLED = #{abled}
+				WHERE CODE = #{code}
+		</update>
+		
+		<!-- 권한 사용여부 변경 -->
+		<update id="updategrantAbled" parameterType="String">
+			UPDATE GRANTLIST
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE CODE=#{code}
+		</update>
+		
+		<!-- 기타권한 조회 -->
+		<select id="getExGrantInfo" parameterType="String" resultType="com.marketkurly.www.admin.grant.domain.ExGrantAbled">
+			SELECT CODE
+				 , NAME
+				 FROM EX_GRANTABLED
+				 WHERE CODE = #{code}
+		</select>
+		
+		<!-- 기타 권한 수정 -->
+		<update id="updateGrantAbled" parameterType="com.marketkurly.www.admin.grant.domain.ExGrantAbled">
+			UPDATE EX_GRANTABLED
+				SET NAME = #{name}
+				WHERE CODE = #{code}
+		</update>
+		
+		<!-- 기타 권한 삭제 -->
+		<delete id="deleteGrantAbled" parameterType="String">
+			DELETE FROM EX_GRANTABLED
+				WHERE CODE=#{code}
+		</delete>
+		
+		<!-- 기타 권한 부여 삭제 -->
+		<delete id="deleteExgrantabledlist" parameterType="String">
+			DELETE FROM EXGRANTABLEDLIST
+				WHERE EXGRANT_CODE = #{code}
+		</delete>
+     </mapper>

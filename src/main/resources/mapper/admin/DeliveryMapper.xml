@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+	namespace="com.marketkurly.www.admin.delivery.mapper.DeliveryMapper">
+	
+	<!-- 배송비 조회 -->
+	<select id="getDeliveryPrice" resultType="int">
+		SELECT PRICE
+			 FROM VALUE_TBL
+			 WHERE NAME='delivery'
+	</select>
+	
+	<!-- 배송비 수정 -->
+	<update id="updateDeliveryPrice" parameterType="int">
+		UPDATE VALUE_TBL
+			SET PRICE = #{price}
+				, STARTDATE = SYSDATE
+			WHERE NAME = 'delivery'
+	</update>
+	
+	<!-- 배송비 이력 추가 -->
+	<insert id="insertValueHistory" parameterType="String">
+		INSERT INTO VALUE_HISTORY(NAME
+								 , PRICE
+								 , STARTDATE
+								 )
+				VALUES(#{name}
+					 , (SELECT PRICE
+					 		 FROM VALUE_TBL
+					 		 WHERE NAME = #{name}
+					 	)
+					 , (SELECT STARTDATE
+					 		 FROM VALUE_TBL
+					 		 WHERE NAME = #{name}
+					 	)
+					 )
+	</insert>
+	
+	<!-- 주문 목록 배송비 조회 -->
+	<select id="getOrderListDelivery" resultType="com.marketkurly.www.admin.delivery.domain.Delivery">
+		<![CDATA[
+		SELECT ORDER_CODE
+		     , ORDER_DATE
+		     , SUM(DECODE(V.PRICE,NULL,H.PRICE,V.PRICE)) AS PRICE
+		     , COUNT(USER_ID) AS SELLER_COUNT
+		     , LISTAGG(USER_ID, ', ') WITHIN GROUP (ORDER BY ORDER_CODE) AS SELLER
+		    FROM (SELECT ORDER_CODE
+		                 , USER_ID
+		                 , ORDER_DATE
+		                 FROM ORDERLIST O 
+		                    , ITEM I 
+		                WHERE O.ORDER_ITEMCODE = I.ITEM_CODE
+                        AND O.ORDER_STATE = '주문완료'
+		                GROUP BY ORDER_CODE, USER_ID, ORDER_DATE
+		                ORDER BY ORDER_CODE
+		            ) O
+		    LEFT JOIN VALUE_TBL V
+		    ON O.ORDER_DATE >= V.STARTDATE
+		    AND V.NAME = 'delivery'
+		    LEFT JOIN VALUE_HISTORY H
+		    ON O.ORDER_DATE >= H.STARTDATE
+		    AND O.ORDER_DATE < H.ENDDATE
+		    AND H.NAME='delivery'
+		    GROUP BY ORDER_CODE, ORDER_DATE
+		    ORDER BY ORDER_CODE DESC
+	    ]]>
+	</select>
+	
+	<!-- 이번 달 총 배송비 -->
+	<select id="getNowDeliveryPrice" resultType="int">
+		<![CDATA[
+		SELECT SUM(DECODE(V.PRICE,NULL,H.PRICE,V.PRICE)) AS PRICE
+			    FROM (SELECT ORDER_CODE
+			                 , USER_ID
+			                 , ORDER_DATE
+			                 FROM ORDERLIST O 
+			                    , ITEM I 
+			                WHERE O.ORDER_ITEMCODE = I.ITEM_CODE
+                        	AND O.ORDER_STATE = '주문완료'
+			                AND O.ORDER_DATE >= TRUNC(SYSDATE, 'MM')
+			                GROUP BY ORDER_CODE, USER_ID, ORDER_DATE
+			            ) O
+			    LEFT JOIN VALUE_TBL V
+			    ON O.ORDER_DATE >= V.STARTDATE
+			    AND V.NAME = 'delivery'
+			    LEFT JOIN VALUE_HISTORY H
+			    ON O.ORDER_DATE >= H.STARTDATE
+			    AND O.ORDER_DATE < H.ENDDATE
+			    AND H.NAME='delivery'
+			    ORDER BY ORDER_CODE
+	]]>
+	</select>
+	
+	<!-- 배송비 이력 조회 -->
+	<select id="getDeliveryHistory" resultType="com.marketkurly.www.admin.delivery.domain.ValueHistory">
+		SELECT NAME
+		     , PRICE
+		     , STARTDATE
+		     , ENDDATE
+		     FROM VALUE_HISTORY
+		     WHERE NAME='delivery'
+		     ORDER BY STARTDATE DESC
+	</select>
+	
+	<!-- 판매자별 배송비 조회 -->
+	<select id = "getSellerDelivery" resultType="com.marketkurly.www.admin.delivery.domain.Delivery">
+		<![CDATA[
+		SELECT O.USER_ID AS SELLER
+		     , SUM(DECODE(V.PRICE,NULL,H.PRICE,V.PRICE)) AS PRICE
+     		 , COUNT(*) AS SELLER_COUNT
+		     FROM(SELECT O.ORDER_DATE
+		                 , I.USER_ID
+		                 , O.ORDER_CODE
+		                 FROM ORDERLIST O
+		                 , ITEM I
+		                 WHERE O.ORDER_ITEMCODE = I.ITEM_CODE
+		                 AND O.ORDER_STATE = '주문완료'
+		                 AND O.ORDER_DATE >= TRUNC(SYSDATE, 'MM')
+		                 GROUP BY O.ORDER_CODE, I.USER_ID, O.ORDER_DATE
+		                 ORDER BY ORDER_CODE
+		        ) O
+		    LEFT JOIN VALUE_TBL V
+		    ON O.ORDER_DATE >= V.STARTDATE
+		    AND V.NAME = 'delivery'
+		    LEFT JOIN VALUE_HISTORY H
+		    ON O.ORDER_DATE >= H.STARTDATE
+		    AND O.ORDER_DATE < H.ENDDATE
+		    AND H.NAME='delivery'
+		    GROUP BY O.USER_ID
+		    ORDER BY O.USER_ID
+		]]>
+	</select>
+</mapper>

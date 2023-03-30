@@ -1,0 +1,662 @@
+var _updateAddress;
+var _addrData = '';
+var REGION_GROUP_CODE = {
+  Chungcheong: 'AA',
+  Daegu: 'AB',
+  Daegu_normla: 'NJ',
+  Gwangju: 'AC',
+  Busan: 'BS', // 부산 샛별시간대 코드
+  Busan_normal: 'NK', // 부산 일반택배시간대 코드
+  Ulsan: 'UL', // 울산 샛별시간대 코드
+  Ulsan_normal: 'NO', // 울산 일반택배시간대 코드
+};
+
+$(document).ready(function () {
+  var isLogin = location.search.indexOf('guest=1') === -1;
+  var getReceptionAreaInfo = function(address) {
+    var objReceptionArea = {};
+    var arrArea = ['', '문 앞', '경비실', '택배함', '기타 장소', '샛별박스'];
+    var arrMeansType = ['', '공동현관 비밀번호', '경비실로 호출', '경비실로 배송', '세대호출', '연락처로 전화', '자유 출입 가능', '기타'];
+
+    if(typeof address.pickup_type !== 'undefined') {
+      objReceptionArea.area = arrArea[address.pickup_type] || '';
+      objReceptionArea.pickUpEtc = (address.pickup_type === 2 || address.pickup_type === 4) ? address.pickup_detail : '';
+      objReceptionArea.meansType = arrMeansType[address.means_type];
+      objReceptionArea.meansEtc = (address.means_type === 7) ? address.means : '';
+    }
+
+    return objReceptionArea;
+  };
+
+  var isDeliveryTypeValid = function(deliveryType) {
+    var currentDeliveryType = localStorage.getItem('currentDeliveryType');
+
+    if (!currentDeliveryType) { // 장바구니 진입 이력 없이 주문서 진입한 경우, 여기서 저장함
+      localStorage.setItem('currentDeliveryType', deliveryType);
+
+      return true;
+    }
+
+    if (deliveryType !== currentDeliveryType) {
+      _oldAlert('배송유형이 변경되어 주문서의 상품 정보가 업데이트됩니다. 장바구니를 다시 확인해주세요.');
+      window.location.href='/shop/goods/goods_cart.php';
+
+      return false;
+    }
+
+    return true;
+  };
+
+  var getDeactivationTimeByPolicy = function (address) {
+    var regionCode = address.region_group_code;
+    var policies = address.policies;
+
+    var isMultiplePolicyApplied = (
+      regionCode === 'AB' || regionCode === 'BS' || regionCode === 'UL' // (샛별: 대구, 부산, 울산)
+      || regionCode === 'NJ' || regionCode === 'NK' || regionCode === 'NO'  // (택배: 대구, 부산, 울산)
+    );
+
+    if (isMultiplePolicyApplied && policies.length) {
+      var deactivationTime = policies.reduce(function(acc, cur) {
+        if (
+          (cur.courierOperation.operation.time === 'DAWN')
+          && cur.deactivation
+          && cur.deactivation.startAt
+          && cur.deactivation.endAt
+        ) {
+          acc.startAt = cur.deactivation.startAt.slice(0, 2);
+          acc.endAt = cur.deactivation.endAt.slice(0, 2);
+        }
+
+        return acc;
+      }, {
+        startAt: null,
+        endAt: null,
+      });
+
+      return deactivationTime;
+    }
+
+    return null;
+  };
+
+  var getDeliveryTypeByPolicy = function (address) {
+    var regionCode = address.region_group_code;
+    var policies = address.policies;
+    var deliveryType = address.delivery_type;
+
+    var isMultiplePolicyApplied = (
+      regionCode === 'AB' || regionCode === 'BS' || regionCode === 'UL' // (샛별: 대구, 부산, 울산)
+      || regionCode === 'NJ' || regionCode === 'NK' || regionCode === 'NO'  // (택배: 대구, 부산, 울산)
+    );
+
+    if (isMultiplePolicyApplied && policies.length) {
+      if (deliveryType === 'direct') {
+        return 'direct';
+      }
+
+      var isDirectApplied = policies.reduce(function(acc, cur) {
+        return acc || cur.courierOperation.operation.time === 'DAWN';
+      }, false);
+
+      return isDirectApplied ? 'direct' : 'indirect';
+    }
+
+    return deliveryType || null;
+  };
+
+  // 배경 딤드처리
+  var bgDimAction = function(isCheck){
+    if(isCheck){
+      $('#bgLoading').addClass('bg_order').show();
+      return;
+    }
+    if(!isCheck){
+      $('#bgLoading').removeClass('bg_order').hide();
+      return;
+    }
+  }
+
+  // 배송지 변경안내 팝업
+  var $deliveryInfoPopup = $('#layerInfo');
+  var $btnLayerInfo = $('#btnLayerInfo');
+  var isEventCheckDeliveryInfoPopup = false;
+  var deliveryInfoPopup = function(isCheck, type){
+    if(isCheck){
+      if(type === 'one'){
+        if(localStorage.getItem('order.showChgAddrInfo') === null && localStorage.getItem('order.showChgAddrInfo') !== 'false'){
+          $deliveryInfoPopup.addClass('on');
+          localStorage.setItem('order.showChgAddrInfo', false);
+        }
+      }else{
+        $deliveryInfoPopup.addClass('on');
+      }
+    }else{
+      $deliveryInfoPopup.removeClass('on');
+    }
+  }
+
+  $btnLayerInfo.on('click', function(){
+    deliveryInfoPopup(true);
+  });
+
+  $deliveryInfoPopup.on('click', function(){
+    deliveryInfoPopup(false);
+  })
+
+  // 샛별지역 확장 안내 팝업
+  var showNewSatbyulPopup = function(address) {
+    var cutoff = {
+      AA: { // 대전/충청
+        region: '주문 지역(대전, 충청 일부)',
+        orderEnd: 23,
+        deliveryEnd: 7,
+      },
+      AB: { // 대구
+        region: '주문 지역(대구 일부)',
+        orderEnd: 20,
+        deliveryEnd: 8,
+        courierNote: '20시~22시 주문은 택배로 배송됩니다.',
+      },
+      BS: { // 부산
+        region: '주문 지역(부산/울산 일부)',
+        orderEnd: '밤 6',
+        deliveryEnd: '아침 8',
+        courierNote: '18시~22시 주문은 택배로 배송됩니다.',
+      },
+      UL: {  // 울산
+        region: '주문 지역(부산/울산 일부)',
+        orderEnd: '밤 6',
+        deliveryEnd: '아침 8',
+        courierNote: '18시~22시 주문은 택배로 배송됩니다.',
+      },
+    };
+
+    var regionCode = address.region_group_code;
+    var isNonMetropolitan = ( // 비수도권 샛별지역 체크
+      regionCode === REGION_GROUP_CODE.Chungcheong ||
+      regionCode === REGION_GROUP_CODE.Daegu ||
+      regionCode === REGION_GROUP_CODE.Busan ||
+      regionCode === REGION_GROUP_CODE.Ulsan
+    );
+    var showPopup = ( // 비수도권 샛별지역 사용자이면서 샛별배송지 정보를 입력하지 않은 경우, 샛별지역 첫 이용자로 간주함
+      isNonMetropolitan &&
+      address.pickup_detail === '' &&
+      address.pickup_type === 0
+    );
+
+    if (!showPopup) {
+      return;
+    }
+
+    document.getElementById('new-satbyul-region').innerHTML = cutoff[regionCode].region + '에 ';
+    document.getElementById('new-satbyul-order-end-time').innerHTML = '매일 ' + cutoff[regionCode].orderEnd + '시';
+    document.getElementById('new-satbyul-order-delivery-time').innerHTML = '다음날 ' + cutoff[regionCode].deliveryEnd + '시';
+
+    if (cutoff[regionCode].courierNote) {
+      document.getElementById('new-satbyul-courier-note').innerHTML = cutoff[regionCode].courierNote;
+    } else {
+      document.getElementById('new-satbyul-courier-note').style.display = 'none';
+    }
+
+    $('#popup-for-new-satbyul-user-web').css('display', 'block');
+  };
+
+  var getOrderExpectNotice = function(address) {
+    // KM-5470: 명절 샛별생산 중단안내. common_js/holiday-delivery.js 에서 해당 id에 html 추가
+    if (typeof window.holidayDelivery === 'function' && address.delivery_type === 'direct' && window.holidayDelivery('order', 'order_notice_section')) {
+      return;
+    }
+
+    var regionCode = address.region_group_code;
+
+    var isStar = regionCode === 'AB' || regionCode === 'BS' || regionCode === 'UL'; // (샛별: 대구, 부산, 울산)
+    var isNormal = regionCode === 'NJ' || regionCode === 'NK' || regionCode === 'NO';  // (택배: 대구, 부산, 울산)
+
+    if (!isStar && !isNormal) {
+      return;
+    }
+
+    var getNormalMessages = function(hour) {
+      if (hour === 23) {
+        return {
+          orderUntilAt: '내일 22시',
+          deliveryDoneAt: '모레 밤 12시 전',
+          courierNotice: '택배사의 사정에 따라 도착 일정이 달라질 수 있습니다.',
+        };
+      } else if (hour >= 0 && hour < 22) {
+        return {
+          orderUntilAt: '22시',
+          deliveryDoneAt: '내일 밤 12시 전',
+          courierNotice: '택배사의 사정에 따라 도착 일정이 달라질 수 있습니다.',
+        };
+      }
+    }
+
+    var getStarMessages = function(hour, region) {
+      var starOrderEnd = { // 샛별택배 마감 시간
+        AB: 20,
+        BS: 18,
+        UL: 18,
+      };
+
+      var orderEndTime = starOrderEnd[region];
+
+      if (hour === 23) {
+        return {
+          orderUntilAt: `내일 ${orderEndTime}시`,
+          deliveryDoneAt: '모레 아침 8시 전',
+          courierNotice: null,
+        };
+      } else if (hour >= 0 && hour < orderEndTime) {
+        return {
+          orderUntilAt: `${orderEndTime}시`,
+          deliveryDoneAt: '내일 아침 8시 전',
+          courierNotice: null,
+        };
+      }
+    };
+
+    var hour = new Date().getHours();
+    var messages = null;
+
+    if (isNormal) {
+      messages = getNormalMessages(hour);
+    } else if (isStar) {
+      messages = getStarMessages(hour, regionCode);
+    }
+    // 정책: https://kurly0521.atlassian.net/wiki/spaces/MKA/pages/2689859603/3#%EC%A3%BC%EC%9A%94-%EC%A0%95%EC%B1%85
+
+    if (!messages) { // 하드코딩으로 인해서 nullable 체크 필요
+      return;
+    }
+
+    var noticeArea = document.getElementById('order_notice_section');
+    noticeArea.style.display = 'block';
+    noticeArea.getElementsByClassName('order_until_at')[0].innerHTML = messages.orderUntilAt;
+    noticeArea.getElementsByClassName('delivery_done_at')[0].innerHTML = messages.deliveryDoneAt;
+    if (messages.courierNotice) {
+      noticeArea.getElementsByClassName('courier_notice')[0].innerHTML = messages.courierNotice;
+    }
+  };
+
+  // 배송지 받으실 장소 업데이트
+  var updateAddress = function (addrData, skipCheck) {
+    if (typeof addrData === 'string') {
+      try {
+        addrData = JSON.parse(addrData);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+    _addrData = JSON.stringify(addrData);
+
+    $('#noAddress').css('display', 'none');
+    $('#divDestination').css('display', '');
+    $('#dataDelivery').removeClass('invalid');
+
+    // 레거시 정보 업데이트
+    $('#address').val(addrData.address);
+    $('#road_address').val(addrData.road_address);
+    $('#address_sub').val(addrData.address_sub);
+    $('#zonecode').val(addrData.road_zonecode);
+    $('#means_inp').val(addrData.means);
+
+
+    $('#deliPoli').val(addrData.delivery_policy);
+    $('#deliveryType').val(addrData.delivery_type);
+
+    $('#addressBookNo').val(addrData.no);
+
+    if(skipCheck !== true) {
+      // order.htm 파일에 있음 배송지 변경시마다 한번식 호출
+      getDelivery();
+    }
+    // order.htm 파일에 있음 배송지 변경시마다 한번식 호출
+    star_only();
+
+    // 태그
+    var $spanBadge = $('#addrBadge');
+    var $courierInformation = $('#courierInformation');
+    var $bnrOrder = $('#bnrOrder'); // allpaper challange 배너
+    $spanBadge.attr('class', 'badge');
+
+    var deliveryTypeByPolicy = getDeliveryTypeByPolicy(addrData);
+    var deactivationTime = getDeactivationTimeByPolicy(addrData);
+
+    if (deactivationTime && deactivationTime.startAt && deactivationTime.endAt) {
+      $courierInformation.text(
+        deactivationTime.startAt
+        + '시~'
+        + deactivationTime.endAt
+        + '시 택배배송'
+      );
+    }
+
+    var isMetropolitan = !(
+      addrData.region_group_code === 'AA'  // 충청
+      || addrData.region_group_code === 'AB'  // 대구
+      || addrData.region_group_code === 'NJ'  // 대구 택배
+      || addrData.region_group_code === 'BS'  // 부산
+      || addrData.region_group_code === 'NK'  // 부산 택배
+      || addrData.region_group_code === 'UL'  // 울산
+      || addrData.region_group_code === 'NO'  // 울산 택배
+    );
+
+
+    if(deliveryTypeByPolicy === 'direct') {
+      $spanBadge.addClass('star').text('샛별배송');
+
+      if (isMetropolitan) {
+        $bnrOrder.show();
+      } else {
+        $bnrOrder.hide();
+      }
+    }
+    else if(deliveryTypeByPolicy === 'indirect') {
+      $spanBadge.addClass('regular').text('택배배송');
+      $bnrOrder.hide();
+    }
+    else {
+      $spanBadge.addClass('none').text('배송불가지역');
+      $bnrOrder.hide();
+    }
+
+    if(isLogin && addrData.type === 'D') {
+      $('#addrDefault').addClass('on').text($('#addrDefault').data('text'));
+    }
+
+    // 주소 정보
+    var addrInfo = (addrData.base_address_type === 'R') ? addrData.road_address : addrData.address;
+    var zipcode = addrData.road_zonecode ||  addrData.zipcode;
+    addrInfo += ' ' + addrData.address_sub;
+    //addrInfo += ' <span class="num">[' + zipcode + ']</span>';
+
+    var receiverInfo;
+
+    if (addrData.name.trim() === '' || addrData.mobile.trim() === '') {
+      receiverInfo = '받으실 분 정보를 입력해 주세요';
+      $('#receiverInfo').addClass('off');
+      $('#wayPlace').css('display', 'none');
+    }
+    else {
+      receiverInfo = addrData.name + ', ' + addrData.mobile;
+      $('#receiverInfo').removeClass('off');
+      $('#btnUpdateSubAddress').removeClass('active').addClass('default');
+      $('#btnUpdateSubAddress').text('수정');
+    }
+
+    $('#addrInfo').html(addrInfo);
+    $('#receiverInfo').text(receiverInfo);
+    //$('#btnUpdateAddress').text('변경');
+
+    var $divReception = $('#divReception');
+    // 샛별배송인지 체킹하여 세부 주소 노출
+    // if(addrData.delivery_type !== 'direct') {
+    //   $divReception.css('display', 'none');
+    // }
+    // else {
+      $divReception.css('display', '');
+      $divReception.removeClass('invalid');
+      // 받으실 장소  처리
+      var receptionArea = getReceptionAreaInfo(addrData);
+
+      if (addrData.delivery_type === 'direct') {
+        var deliveryCompleteTimeByValue = {
+          0: '배송 직후',
+          1: '오전 7시',
+          2: '오전 8시',
+        };
+
+        var deliveryMessageSendAt = deliveryCompleteTimeByValue[addrData.delivery_message_send_at];
+
+        $('#deliveryMessageDetail').html(deliveryMessageSendAt);
+      }
+
+      if (typeof receptionArea.area !== 'undefined' && receptionArea.area !== '') {
+        //$('#noReceptionArea').css('display', 'none');
+        $('#areaInfo').css('display', '');
+        $('#deliveryMessage').css('display', '');
+        $('#wayPlace').css('display', '');
+
+        var areaInfo = receptionArea.area;
+        $('#areaInfo').html(areaInfo);
+
+        var meansType = receptionArea.meansType;
+
+        if (receptionArea.meansEtc !== '') {
+          meansType += ' (' + receptionArea.meansEtc + ')';
+        }
+
+        if (receptionArea.pickUpEtc !== '') {
+          meansType += receptionArea.pickUpEtc;
+        }
+
+        if (meansType !== '') {
+          $('#wayPlace').css('display', '');
+          $('#meanType').css('display', '').removeClass('off').html(meansType);
+        } else {
+          $('#meanType').css('display', 'none');
+        }
+        $('#btnUpdateSubAddress').text('수정');
+
+        if (
+          !isMetropolitan &&
+          addrData.pickup_type !== 0
+        ) {
+          $('#meanType').removeClass('should_update_details');
+        }
+
+        if (addrData.delivery_type === 'indirect') {
+          if (addrData.memo !== '') {
+            $('#areaInfo').css('display', 'none');
+            $('#deliveryMessage').css('display', 'none');
+            $('#meanType').addClass('no_before').text(addrData.memo);
+          } else {
+            $('#wayPlace').css('display', 'none');
+          }
+        }
+      } else {
+        if (addrData.delivery_type === 'direct') {
+          $('#meanType').css('display', '').addClass('off').html('받으실 장소를 입력해 주세요');
+        }
+
+        if (
+          !isMetropolitan &&
+          addrData.mobile !== '' &&
+          addrData.name !== '' &&
+          addrData.pickup_type === 0 &&
+          addrData.pickup_detail === ''
+        ) {
+          $('#meanType').addClass('should_update_details');
+        }
+
+        $('#areaInfo').css('display', 'none');
+
+        // 택배 배송 '배송기사 요청사항' 내용 출력
+        if (addrData.delivery_type === 'indirect') {
+          if (addrData.memo !== '') {
+            $('#wayPlace').css('display', '');
+            $('#meanType').css('display', '');
+            $('#meanType').addClass('no_before').html(addrData.memo);
+            $('#btnUpdateSubAddress').text('수정');
+          } else {
+            $('#wayPlace').css('display', 'none');
+          }
+        }
+      }
+    //}
+
+    // 배송지 변경 안내(최초 1회만 적용되도록 변경)
+    if(!isEventCheckDeliveryInfoPopup){
+      isEventCheckDeliveryInfoPopup = true;
+      deliveryInfoPopup(true, 'one');
+    }
+    // 업데이트 완료시 딤드처리 제거
+    bgDimAction(false);
+  };
+  // 새창에서 호출 하기 위한 window object할당
+  _updateAddress = updateAddress;
+
+  // find polyfile
+  if (!Array.prototype.find) {
+    Object.defineProperty(Array.prototype, 'find', {
+      value: function(predicate) {
+        if (this == null) {
+          throw new TypeError('"this" is null or not defined');
+        }
+        var o = Object(this);
+        var len = o.length >>> 0;
+        if (typeof predicate !== 'function') {
+          throw new TypeError('predicate must be a function');
+        }
+        var thisArg = arguments[1];
+        var k = 0;
+        while (k < len) {
+          var kValue = o[k];
+          if (predicate.call(thisArg, kValue, k, o)) {
+            return kValue;
+          }
+          k++;
+        }
+        return undefined;
+      },
+      configurable: true,
+      writable: true
+    });
+  }
+  // find polyfill end
+
+  if (isLogin) {
+    // 업데이트 완료시 딤드처리 제거
+    bgDimAction(true);
+    // 기본 배송지 정보 호출
+    kurlyApi({
+      method :'get',
+      url :'/checkout/v1/addressbook'
+    })
+    .then(function(res) {
+      if (res.status === 200) {
+        var arrAddress = res.data.data;
+
+        if (arrAddress.length > 0) {
+          var addrData = arrAddress.find(function (addr) {
+            return addr.is_current_delivery_address === true;
+          }) || arrAddress[0];
+
+          if(!isDeliveryTypeValid(addrData.delivery_type)) {
+            return;
+          };
+
+          updateAddress(addrData);
+          showNewSatbyulPopup(addrData);
+          getOrderExpectNotice(addrData);
+        }else{
+          bgDimAction(false);
+        }
+      }
+      else {
+        console.error("API 응답 이상", res);
+      }
+    })
+    .catch(function(err) {
+      if (err.response) {
+        var objErr = err.response.data.error;
+        console.error("API Error!!! ", objErr);
+      }
+      alert('주소데이타를 불러 올 수 없습니다.');
+    });
+  } else {
+    // 업데이트 완료시 딤드처리 제거
+    bgDimAction(true);
+    // 비회원 현 배송지 체킹
+    kurlyApi({
+      method :'get',
+      url :'/cart/v1/cart'
+    })
+    .then(function (res) {
+      if (res.status === 200) {
+        var selectedAddr = res.data.data;
+        if (selectedAddr.address !== '') {
+          var addrData = {
+            type: 'D',
+            name: '',
+            base_address_type: selectedAddr.base_address_type,
+            zipcode: selectedAddr.road_zonecode,
+            address: selectedAddr.address,
+            address_sub: selectedAddr.address_sub,
+            road_zonecode: selectedAddr.road_zonecode,
+            road_address: selectedAddr.road_address,
+            mobile:'',
+            means_type:0,
+            means: '',
+            pickup_type:0,
+            pickup_detail: '',
+            star_box_pass: '',
+            delivery_message_send_at: 0,
+            memo: ''
+          };
+
+          // 비회원 현배송지 저장
+          kurlyApi({
+            method : 'post',
+            url : '/checkout/v1/addressbook',
+            data : addrData
+          }).then(function (res) {
+            if (res.status === 200) {
+              var curAddress = res.data.data;
+
+              if(!isDeliveryTypeValid(curAddress.delivery_type)) {
+                return;
+              };
+
+              updateAddress(curAddress);
+              showNewSatbyulPopup(curAddress);
+              getOrderExpectNotice(curAddress);
+            }
+          }).catch(function (err) {
+            var objErr = err.response.data.error;
+            console.error("API Error!!! ", err);
+          });
+        } else {
+          bgDimAction(false);
+        }
+      } else {
+        console.error("API 응답 이상", res);
+      }
+    })
+    .catch(function (err) {
+      alert('주소데이타를 불러 올 수 없습니다.');
+      var objErr = err.response.data.error;
+      console.error("API Error!!! ", objErr);
+    });
+  }
+
+  // 배송지 수정
+  var optPopUpWindow = {width: 530, height: 700};
+  var openPopUp = function (url, title, opt) {
+    var left = (screen.width-opt.width)/2;
+    var top = (screen.height-opt.height)/2;
+    var features = 'menubar=no,location=no,resizable=yes,scrollbars=yes,'
+      + 'status=no,innerWidth=' + opt.width + ',innerHeight=' + opt.height
+      + ',width=' + opt.width + ',height=' + opt.height
+      + ',left=' + left + ',top=' + top;
+
+      window.open(url, title, features);
+  };
+
+  // 주소록 리스트 or 주소 입력 화면 호출
+  var popUpUrl = '/app/order/index.html?device=pc&t=' + (new Date()).valueOf() + '#/load-data';
+  $('#btnUpdateAddress').click(function(evt) {
+    evt.preventDefault();
+    var addressNo = $('#addressBookNo').val();
+    openPopUp(popUpUrl + '/input-receiver-info/' + addressNo, 'orderPopUp', optPopUpWindow);
+  });
+
+  // 수령 장소 수정 창 호출
+  $('#btnUpdateSubAddress').click(function(evt) {
+    evt.preventDefault();
+    var addressNo = $('#addressBookNo').val();
+    openPopUp(popUpUrl + '/input-reception-area/' + addressNo, 'orderPopUp', optPopUpWindow);
+  });
+});

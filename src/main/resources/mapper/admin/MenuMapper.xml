@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+     <mapper namespace="com.marketkurly.www.admin.menu.mapper.MenuMapper">
+		
+		<!-- 메뉴 코드 유무 검사 -->
+		<select id="exitMenuCode" parameterType="String" resultType = "String">
+			SELECT
+				MENU_CODE
+				FROM MENU
+				WHERE MENU_CODE=#{MENU_CODE}
+		</select>
+		
+		<!-- 메뉴 추가 -->
+		<insert id="addMenu" parameterType="com.marketkurly.www.admin.menu.domain.Menu">
+			INSERT
+				INTO MENU(
+					  MENU_CODE
+					, MENU_NAME
+					, UPDATE_ABLED
+					, ABLED
+				)
+				VALUES(
+					  #{menu_code}
+					, #{menu_name}
+					, #{update_abled}
+					, #{abled}
+				)
+		</insert>
+		
+		<!-- 메뉴 조회 -->
+		<select id="getMenuList" resultType="com.marketkurly.www.admin.menu.domain.Menu">
+				SELECT MENU_CODE
+					 , MENU_NAME
+					 , UPDATE_ABLED
+					 , ABLED
+					 FROM MENU
+					 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 소메뉴 코드 유무 검사 -->
+		<select id="exitSubMenuCode" parameterType="String" resultType = "String">
+			SELECT
+				MENU_CODE
+				FROM SUB_MENU
+				WHERE MENU_CODE=#{MENU_CODE}
+		</select>
+		
+		<!-- 소메뉴 추가 -->
+		<insert id="addSubMenu" parameterType="com.marketkurly.www.admin.menu.domain.SubMenu">
+			INSERT
+				INTO SUB_MENU(
+					  MENU_CODE
+					, MENU_NAME
+					, MENU_ADDRESS
+					, MENU_PARENT
+					, UPDATE_ABLED
+					, ABLED
+				)
+				VALUES(
+					  #{menu_code}
+					, #{menu_name}
+					, #{menu_address}
+					, #{menu_parent}
+					, #{update_abled}
+					, #{abled}
+				)
+		</insert>
+		
+		<!-- 메뉴별 소메뉴 조회 -->
+		<select id="getSubMenuList" parameterType="String" resultType="com.marketkurly.www.admin.menu.domain.SubMenu">
+				SELECT MENU_CODE
+					 , MENU_NAME
+					 , MENU_ADDRESS
+					 , MENU_PARENT
+					 , UPDATE_ABLED
+					 , ABLED
+					 FROM SUB_MENU
+					 WHERE MENU_PARENT= #{MENU_CODE}
+					 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 메뉴 코드, 이름 조회 -->
+		<select id="getMenuNameList" resultType="com.marketkurly.www.admin.menu.domain.Menu">
+				SELECT MENU_CODE
+					 , MENU_NAME
+					 FROM MENU
+					 WHERE ABLED='Y'
+					 ORDER BY MENU_CODE
+		</select>
+		
+		<!-- 메뉴별 소메뉴 이름, 경로 조회 -->
+		<select id="getSubMenuNameList" parameterType="com.marketkurly.www.admin.grant.domain.GrantAbled" resultType="com.marketkurly.www.admin.menu.domain.Nav">
+				SELECT A.MENU_NAME
+					 , A.MENU_ADDRESS
+					 FROM SUB_MENU      A
+                        , GRANTABLED    B
+					 WHERE A.MENU_PARENT= #{menu_code}
+					 AND B.GRANT_CODE = #{grant_code}
+                     AND A.MENU_CODE = B.MENU_CODE
+					 AND A.ABLED='Y'
+					 ORDER BY A.MENU_CODE
+		</select>
+		
+		<!-- 메뉴별 소메뉴, 대메뉴 이름 조회 -->
+		<select id="getSubMenuName" parameterType="String" resultType="com.marketkurly.www.admin.menu.domain.MenuName">
+				SELECT MENU_NAME
+					 , MENU_PARENT
+					FROM (
+						SELECT A.MENU_NAME
+							 , B.MENU_NAME AS MENU_PARENT
+							 FROM SUB_MENU A
+							 	, MENU B
+							 WHERE MENU_ADDRESS= #{MENU_ADDRESS}
+							 AND A.MENU_PARENT=B.MENU_CODE
+					)
+					WHERE ROWNUM = 1
+				
+		</select>
+		
+		<!-- 메뉴 수정, 삭제 가능 여부 조회 -->
+		<select id="getUpdateAbled" parameterType="String" resultType="String">
+			SELECT UPDATE_ABLED
+				FROM MENU
+				WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 메뉴 사용여부 변경 -->
+		<update id="updateMenuAbled" parameterType="String">
+			UPDATE MENU
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+		
+		<!-- 소메뉴 수정, 삭제 가능 여부 조회 -->
+		<select id="getSubUpdateAbled" parameterType="String" resultType="String">
+			SELECT UPDATE_ABLED
+				FROM SUB_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 소메뉴 사용여부 변경 -->
+		<update id="updateSubMenuAbled" parameterType="String">
+			UPDATE SUB_MENU
+				SET ABLED = DECODE(ABLED,'Y','N','Y')
+				WHERE MENU_CODE=#{menu_code}
+		</update>
+		
+		<!-- 대메뉴 삭제 -->
+		<delete id="deleteMenu" parameterType="String">
+			DELETE FROM MENU
+				WHERE MENU_CODE=#{menu_code}
+		</delete>
+		
+		<!-- 대메뉴 삭제 시 모든 소메뉴 삭제 -->
+		<delete id="deleteAllSubMenu" parameterType="String">
+			DELETE FROM SUB_MENU
+				WHERE MENU_PARENT=#{menu_code}
+		</delete>
+		
+		<!-- 소메뉴 삭제 -->
+		<delete id="deleteSubMenu" parameterType="String">
+			DELETE FROM SUB_MENU
+				WHERE MENU_CODE=#{menu_code}
+		</delete>
+		
+		<!-- 메뉴 정보 조회 -->
+		<select id="getMenuInfo" parameterType="String" resultType="com.marketkurly.www.admin.menu.domain.Menu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , UPDATE_ABLED
+				 , ABLED
+				 FROM MENU
+				 WHERE MENU_CODE=#{menu_code}
+		</select>
+		
+		<!-- 메뉴 수정 -->
+		<update id="updateMenu" parameterType="com.marketkurly.www.admin.menu.domain.Menu">
+			UPDATE MENU
+				SET MENU_NAME = #{menu_name}
+					, UPDATE_ABLED = #{update_abled}
+					, ABLED = #{abled}
+				WHERE MENU_CODE = #{menu_code}
+		</update>
+		
+		<!-- 소메뉴 정보 조회 -->
+		<select id="getSubMenuInfo" parameterType="String" resultType="com.marketkurly.www.admin.menu.domain.SubMenu">
+			SELECT MENU_CODE
+				 , MENU_NAME
+				 , MENU_ADDRESS
+				 , UPDATE_ABLED
+				 , ABLED
+				 FROM SUB_MENU
+				 WHERE MENU_CODE = #{menu_code}
+		</select>
+		
+		<!-- 소메뉴 수정 -->
+		<update id="updateSubMenu" parameterType="com.marketkurly.www.admin.menu.domain.SubMenu">
+			UPDATE SUB_MENU
+				SET MENU_NAME = #{menu_name}
+					, MENU_ADDRESS = #{menu_address}
+					, UPDATE_ABLED = #{update_abled}
+					, ABLED = #{abled}
+				WHERE MENU_CODE = #{menu_code}
+		</update>
+		
+		<!-- 권한 검사 -->
+		<select id="getGrant" parameterType="String" resultType="String">
+			SELECT USER_AUTH
+				FROM USER_TBL
+				WHERE USER_ID = #{id}
+		</select>
+	</mapper>

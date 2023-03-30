@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace="com.marketkurly.www.item.main.mapper.ItemMapper">
+  <!--  
+		<select id="getItemInfo" resultType="com.marketkurly.www.item.main.domain.ItemVO">
+	
+		select item_code ,item_name, item_price, item_stock, item_detail, item_image , ori_date from item 
+		  where item_code = ${item_code}
+	
+	</select>
+ -->
+  </mapper>

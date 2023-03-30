@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  <mapper namespace = "com.marketkurly.www.common.order.mapper.OrderItemMapper" >
+  
+		<!-- 주문 테이블 등록 -->
+	<insert id="enrollOrder">
+	
+	INSERT INTO ORDERLIST(ORDER_CODE,ORDER_ITEMCODE, ORDER_ID, ORDER_COUNT, ORDER_STATE,ORDER_DATE, ADDRESS)
+    	VALUES(#{order_code,jdbcType=VARCHAR},#{order_itemcode,jdbcType=VARCHAR}, #{order_id,jdbcType=VARCHAR}, #{order_count},
+    	 				'주문완료',SYSDATE,#{address,jdbcType=VARCHAR})
+	
+	</insert>
+	  <!-- 상품코드, 주문아이디, 주문수량 -->
+  <select id="getOrderInfo" resultType="int">
+	
+	SELECT CART_COUNT
+			FROM TEST_CART
+				WHERE CART_ID = #{cart_id,jdbcType=VARCHAR} AND CART_ITEMCODE = #{cart_itemcode,jdbcType=VARCHAR}
+	
+	</select>
+	
+	
+	<!-- 주문일자, 주문코드 -->
+	<select id="getInfo" resultType="com.marketkurly.www.common.order.domain.OrderVO">
+	
+		SELECT SYSDATE AS ORDER_DATE,CONCAT('o',LPAD(ORDER_SEQUENCE.NEXTVAL,9,'0')) AS ORDER_CODE 
+				FROM DUAL 
+	</select>
+	
+	
+	
+	</mapper>
